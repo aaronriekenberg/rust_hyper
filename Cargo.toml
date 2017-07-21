@@ -6,4 +6,7 @@ authors = ["Aaron Riekenberg <aaron.riekenberg@gmail.com>"]
 [dependencies]
 hyper = "0.11.1"
 futures = "0.1.14"
-pretty_env_logger = "0.1.1"
+log = "0.3.8"
+simple_logger = "0.4.0"
+net2 = "0.2.30"
+tokio-core = "0.1.8"
