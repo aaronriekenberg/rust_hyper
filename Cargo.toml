@@ -1,0 +1,9 @@
+[package]
+name = "rust_hyper"
+version = "0.1.0"
+authors = ["Aaron Riekenberg <aaron.riekenberg@gmail.com>"]
+
+[dependencies]
+hyper = "0.11.1"
+futures = "0.1.14"
+pretty_env_logger = "0.1.1"
