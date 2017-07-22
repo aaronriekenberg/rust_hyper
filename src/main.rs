@@ -12,7 +12,6 @@ use futures_cpupool::CpuPool;
 use hyper::header::{ContentLength, ContentType};
 use hyper::server::{Http, Service, Request, Response};
 
-use std::sync::Arc;
 use std::thread;
 
 static PHRASE: &'static [u8] = b"Hello World!";
@@ -26,7 +25,7 @@ fn do_in_thread(req: &Request) -> Result<Response, hyper::Error> {
 }
 
 struct Server {
-    cpu_pool: Arc<CpuPool>
+    cpu_pool: CpuPool
 }
 
 impl Service for Server {
@@ -47,9 +46,9 @@ fn main() {
 
     let addr = "0.0.0.0:1337".parse().unwrap();
 
-    let cpu_pool = Arc::new(futures_cpupool::Builder::new().name_prefix("server-").create());
+    let cpu_pool = futures_cpupool::Builder::new().name_prefix("server-").create();
 
-    let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: Arc::clone(&cpu_pool) } )).unwrap();
+    let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: cpu_pool.clone() } )).unwrap();
 
     info!("Listening on http://{} with 1 thread.", http_server.local_addr().unwrap());
 
