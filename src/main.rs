@@ -50,7 +50,7 @@ fn main() {
 
   let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: cpu_pool.clone() } )).unwrap();
 
-  info!("Listening on http://{} with 1 thread.", http_server.local_addr().unwrap());
+  info!("Listening on http://{} with cpu pool", http_server.local_addr().unwrap());
 
   http_server.run().unwrap();
 }
