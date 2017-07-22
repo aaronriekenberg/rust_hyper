@@ -19,6 +19,7 @@ use net2::unix::UnixTcpBuilderExt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::thread;
+use std::time;
 
 use tokio_core::reactor::Core;
 use tokio_core::net::TcpListener;
@@ -37,6 +38,8 @@ impl Service for Echo {
     futures::future::ok(match req.method() {
 
       &Get => {
+        info!("{:?} call {:?}", thread::current().name(), req);
+        thread::sleep(time::Duration::from_millis(1000));
         let mut response = String::new();
         response.push_str("Got ");
         response.push_str(&req.path());
@@ -71,6 +74,7 @@ fn serve(listen_addr: &SocketAddr, protocol: &Http) {
 
   let server =
     listener.incoming().for_each(|(socket, addr)| {
+      info!("accepted {:?} {:?}", addr, thread::current().name());
       protocol.bind_connection(&handle, socket, addr, Echo);
       Ok(())
     });
