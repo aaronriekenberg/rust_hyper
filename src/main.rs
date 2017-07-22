@@ -49,9 +49,9 @@ fn main() {
 
   let cpu_pool = futures_cpupool::Builder::new().name_prefix("server-").create();
 
-  let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: cpu_pool.clone() } )).unwrap();
+  let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: cpu_pool.clone() } )).expect("bind failed");
 
   info!("Listening on http://{} with cpu pool", http_server.local_addr().unwrap());
 
-  http_server.run().unwrap();
+  http_server.run().expect("http_server.run failed");
 }
