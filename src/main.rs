@@ -47,7 +47,7 @@ fn main() {
 
     let addr = "0.0.0.0:1337".parse().unwrap();
 
-    let cpu_pool = Arc::new(futures_cpupool::Builder::new().pool_size(4).name_prefix("server-").create());
+    let cpu_pool = Arc::new(futures_cpupool::Builder::new().name_prefix("server-").create());
 
     let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: Arc::clone(&cpu_pool) } )).unwrap();
 
