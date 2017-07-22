@@ -45,7 +45,7 @@ impl Service for Server {
 fn main() {
     simple_logger::init_with_level(LogLevel::Info).expect("init_with_level failed");
 
-    let addr = "127.0.0.1:1337".parse().unwrap();
+    let addr = "0.0.0.0:1337".parse().unwrap();
 
     let cpu_pool = Arc::new(futures_cpupool::Builder::new().pool_size(4).name_prefix("server-").create());
 
