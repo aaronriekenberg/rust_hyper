@@ -25,32 +25,32 @@ fn do_in_thread(req: &Request) -> Result<Response, hyper::Error> {
 }
 
 struct Server {
-    cpu_pool: CpuPool
+  cpu_pool: CpuPool
 }
 
 impl Service for Server {
 
-    type Request = Request;
-    type Response = Response;
-    type Error = hyper::Error;
-    type Future = futures::BoxFuture<Response, hyper::Error>;
+  type Request = Request;
+  type Response = Response;
+  type Error = hyper::Error;
+  type Future = futures::BoxFuture<Response, hyper::Error>;
 
-    fn call(&self, req: Request) -> Self::Future {
-      self.cpu_pool.spawn_fn(move || do_in_thread(&req)).boxed()
-    }
+  fn call(&self, req: Request) -> Self::Future {
+    self.cpu_pool.spawn_fn(move || do_in_thread(&req)).boxed()
+  }
 
 }
 
 fn main() {
-    simple_logger::init_with_level(LogLevel::Info).expect("init_with_level failed");
+  simple_logger::init_with_level(LogLevel::Info).expect("init_with_level failed");
 
-    let addr = "0.0.0.0:1337".parse().unwrap();
+  let addr = "0.0.0.0:1337".parse().unwrap();
 
-    let cpu_pool = futures_cpupool::Builder::new().name_prefix("server-").create();
+  let cpu_pool = futures_cpupool::Builder::new().name_prefix("server-").create();
 
-    let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: cpu_pool.clone() } )).unwrap();
+  let http_server = Http::new().bind(&addr, move || Ok(Server { cpu_pool: cpu_pool.clone() } )).unwrap();
 
-    info!("Listening on http://{} with 1 thread.", http_server.local_addr().unwrap());
+  info!("Listening on http://{} with 1 thread.", http_server.local_addr().unwrap());
 
-    http_server.run().unwrap();
+  http_server.run().unwrap();
 }
