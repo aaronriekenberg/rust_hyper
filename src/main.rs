@@ -85,7 +85,7 @@ fn start_server(num_threads: usize, addr: &str) {
 
   info!("start_server num_threads = {} addr = {}", num_threads, addr); 
 
-  let listen_addr: SocketAddr = addr.parse().unwrap();
+  let listen_addr: SocketAddr = addr.parse().expect("bad address");
 
   let protocol = Arc::new(Http::new());
 
