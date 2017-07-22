@@ -7,6 +7,7 @@ extern crate simple_logger;
 use log::LogLevel;
 
 use futures::Future;
+
 use futures_cpupool::CpuPool;
 
 use hyper::header::{ContentLength, ContentType};
