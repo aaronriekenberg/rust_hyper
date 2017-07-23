@@ -18,7 +18,8 @@ use std::thread;
 static PHRASE: &'static [u8] = b"Hello World!";
 
 fn do_in_thread(req: &Request) -> Result<Response, hyper::Error> {
-  info!("do_in_thread req {:?} thread {:?}", req, thread::current().name());
+  info!("do_in_thread thread {:?} req {:?}", thread::current().name(), req);
+
   Ok(Response::new()
     .with_header(ContentLength(PHRASE.len() as u64))
     .with_header(ContentType::plaintext())
@@ -37,7 +38,13 @@ impl Service for Server {
   type Future = futures::BoxFuture<Response, hyper::Error>;
 
   fn call(&self, req: Request) -> Self::Future {
-    self.cpu_pool.spawn_fn(move || do_in_thread(&req)).boxed()
+    info!("begin call thread {:?}", thread::current().name());
+
+    let result = self.cpu_pool.spawn_fn(move || do_in_thread(&req)).boxed();
+
+    info!("end call thread {:?}", thread::current().name());
+
+    result
   }
 
 }
