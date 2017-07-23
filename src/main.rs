@@ -17,15 +17,6 @@ use std::thread;
 
 static PHRASE: &'static [u8] = b"Hello World!";
 
-fn do_in_thread(req: &Request) -> Result<Response, hyper::Error> {
-  info!("do_in_thread thread {:?} req {:?}", thread::current().name(), req);
-
-  Ok(Response::new()
-    .with_header(ContentLength(PHRASE.len() as u64))
-    .with_header(ContentType::plaintext())
-    .with_body(PHRASE))
-}
-
 struct Server {
   cpu_pool: CpuPool
 }
@@ -40,7 +31,17 @@ impl Service for Server {
   fn call(&self, req: Request) -> Self::Future {
     info!("begin call thread {:?}", thread::current().name());
 
-    let result = self.cpu_pool.spawn_fn(move || do_in_thread(&req)).boxed();
+    let result = self.cpu_pool.spawn_fn(move || {
+
+      info!("do_in_thread thread {:?} req {:?}", thread::current().name(), req);
+      info!("req.uri.path = {}", req.uri().path());
+
+      Ok(Response::new()
+        .with_header(ContentLength(PHRASE.len() as u64))
+        .with_header(ContentType::plaintext())
+        .with_body(PHRASE))
+
+    }).boxed();
 
     info!("end call thread {:?}", thread::current().name());
 
