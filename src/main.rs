@@ -103,12 +103,12 @@ impl RequestHandler for IndexHandler {
 
 }
 
-fn build_route_configuration() -> RouteConfiguration {
+fn build_route_configuration() -> Arc<RouteConfiguration> {
   let mut routes : HashMap<String, Box<RequestHandler>> = HashMap::new();
 
   routes.insert("/".to_string(), Box::new(IndexHandler));
 
-  RouteConfiguration { routes: routes }
+  Arc::new(RouteConfiguration { routes: routes })
 }
 
 fn main() {
@@ -116,7 +116,7 @@ fn main() {
 
   let addr = "0.0.0.0:1337".parse().unwrap();
 
-  let route_configuration = Arc::new(build_route_configuration());
+  let route_configuration = build_route_configuration();
 
   let cpu_pool = futures_cpupool::Builder::new().name_prefix("server-").create();
 
