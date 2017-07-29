@@ -45,15 +45,31 @@ struct RouteConfiguration {
   routes: HashMap<String, Box<RequestHandler>>
 }
 
-fn build_response(
+fn build_response_status(
+  status_code: StatusCode) -> Response {
+  Response::new()
+    .with_status(status_code)
+}
+
+fn build_response_string(
   status_code: StatusCode,
   body: String,
   content_type: ContentType) -> Response
 {
-  Response::new()
-    .with_status(status_code)
-    .with_header(ContentLength(body.len() as u64))
+  build_response_status(status_code)
     .with_header(content_type)
+    .with_header(ContentLength(body.len() as u64))
+    .with_body(body)
+}
+
+fn build_response_vec(
+  status_code: StatusCode,
+  body: Vec<u8>,
+  content_type: ContentType) -> Response
+{
+  build_response_status(status_code)
+    .with_header(content_type)
+    .with_header(ContentLength(body.len() as u64))
     .with_body(body)
 }
 
@@ -90,7 +106,7 @@ impl Service for ThreadedServer {
       match response_option {
         Some(response) => Ok(response),
         None => {
-          Ok(build_response(
+          Ok(build_response_string(
                StatusCode::NotFound,
                NOT_FOUND_BODY.to_string(),
                ContentType::plaintext()))
@@ -208,7 +224,7 @@ impl IndexHandler {
 impl RequestHandler for IndexHandler {
 
   fn handle(&self, _: &Request) -> Response {
-    build_response(
+    build_response_string(
       StatusCode::Ok,
       self.index_string.clone(),
       ContentType::html())
@@ -314,7 +330,7 @@ impl RequestHandler for CommandHandler {
 
     let html_string = self.build_html_string(pre_string);
 
-    build_response(
+    build_response_string(
       StatusCode::Ok,
       html_string,
       ContentType::html())
@@ -336,12 +352,12 @@ impl StaticFileHandler {
     }
   }
 
-  fn read_file(&self) -> Result<String, Box<Error>> {
+  fn read_file(&self) -> Result<Vec<u8>, Box<Error>> {
     let mut file = File::open(&self.file_path)?;
 
-    let mut file_contents = String::new();
+    let mut file_contents = Vec::new();
 
-    file.read_to_string(&mut file_contents)?;
+    file.read_to_end(&mut file_contents)?;
 
     Ok(file_contents)
   }
@@ -353,16 +369,13 @@ impl RequestHandler for StaticFileHandler {
   fn handle(&self, _: &Request) -> Response {
     match self.read_file() {
       Ok(file_contents) => {
-        build_response(
+        build_response_vec(
           StatusCode::Ok,
           file_contents,
           ContentType(self.mime_type.clone()))
       },
       Err(_) => {
-        build_response(
-          StatusCode::InternalServerError,
-          String::new(),
-          ContentType(self.mime_type.clone()))
+        build_response_status(StatusCode::InternalServerError)
       }
     }
   }
