@@ -1,0 +1,21 @@
+listen_address: 127.0.0.1:8080
+
+main_page_title: Rusty Web
+
+commands:
+
+- http_path: /ifconfig
+  description: ifconfig
+  command: ifconfig
+  args: []
+
+- http_path: /netstat
+  description: netstat
+  command: netstat
+  args: [-a, -n]
+
+static_paths:
+
+- http_path: /style.css
+  fs_path: resources/style.css
+  include_in_main_page: false
