@@ -21,7 +21,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, HttpDate, IfModifiedSince, LastModified};
+use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, IfModifiedSince, LastModified};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -34,6 +34,7 @@ use std::fs::File;
 use std::io::Read;
 use std::process::Command;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 use std::thread;
 
 static NOT_FOUND_BODY: &'static str = "Route Not Found";
@@ -72,6 +73,18 @@ fn build_response_vec(
     .with_header(content_type)
     .with_header(ContentLength(body.len() as u64))
     .with_body(body)
+}
+
+fn systemtime_in_seconds(st: &std::time::SystemTime) -> i64 {
+  match st.duration_since(UNIX_EPOCH) {
+    Ok(dur) => {
+      dur.as_secs() as i64
+    },
+    Err(err) => {
+      let neg = err.duration();
+      -(neg.as_secs() as i64)
+    }
+  }
 }
 
 struct ThreadedServer {
@@ -379,9 +392,9 @@ impl RequestHandler for StaticFileHandler {
         Err(_) => return build_response_status(StatusCode::InternalServerError)
       };
 
-    let file_modified: HttpDate = 
+    let file_modified =
       match file_metadata.modified() {
-        Ok(file_modified) => file_modified.into(),
+        Ok(file_modified) => file_modified,
         Err(_) => return build_response_status(StatusCode::InternalServerError)
       };
 
@@ -389,7 +402,9 @@ impl RequestHandler for StaticFileHandler {
       req.headers().get();
 
     if let Some(if_modified_since_header) = if_modified_since_header_option {
-      if file_modified <= if_modified_since_header.0 {
+      let if_modified_since: SystemTime = if_modified_since_header.0.into();
+      if systemtime_in_seconds(&file_modified) <=
+         systemtime_in_seconds(&if_modified_since) {
         return build_response_status(StatusCode::NotModified);
       }
     }
@@ -400,7 +415,7 @@ impl RequestHandler for StaticFileHandler {
           StatusCode::Ok,
           file_contents,
           ContentType(self.mime_type.clone()))
-          .with_header(LastModified(file_modified))
+          .with_header(LastModified(file_modified.into()))
           .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
       },
       Err(_) => {
