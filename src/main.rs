@@ -117,6 +117,8 @@ impl Service for ThreadedServer {
         response_option = Some(request_handler.handle(&req));
       }
 
+      debug!("response_option = {:?}", response_option);
+
       match response_option {
         Some(response) => Ok(response),
         None => {
@@ -386,6 +388,8 @@ impl StaticFileHandler {
 impl RequestHandler for StaticFileHandler {
 
   fn handle(&self, req: &Request) -> Response {
+    debug!("StaticFileHandler.handle req = {:?}", req);
+
     let file_metadata =
       match self.get_metadata() {
         Ok(metadata) => metadata,
@@ -405,7 +409,9 @@ impl RequestHandler for StaticFileHandler {
       let if_modified_since: SystemTime = if_modified_since_header.0.into();
       if systemtime_in_seconds(&file_modified) <=
          systemtime_in_seconds(&if_modified_since) {
-        return build_response_status(StatusCode::NotModified);
+        return build_response_status(StatusCode::NotModified)
+          .with_header(LastModified(file_modified.into()))
+          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]));
       }
     }
 
