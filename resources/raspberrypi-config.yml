@@ -1,0 +1,64 @@
+listen_address: :::8081
+
+main_page_title: Aaron's Raspberry Pi
+
+threads: 8
+
+commands:
+
+- http_path: /ifconfig
+  description: ifconfig
+  command: /sbin/ifconfig
+  args: []
+
+- http_path: /iwconfig
+  description: iwconfig
+  command: /sbin/iwconfig
+  args: []
+
+- http_path: /netstat
+  description: netstat
+  command: netstat
+  args: [-a, -n]
+
+- http_path: /ntpq
+  description: ntpq
+  command: ntpq
+  args: [-p]
+
+- http_path: /pitemp
+  description: pitemp
+  command: /home/pi/bin/pitemp.sh
+  args: []
+
+- http_path: /top
+  description: top
+  command: top
+  args: [-b, -n1]
+
+- http_path: /uptime
+  description: uptime
+  command: uptime
+  args: []
+
+- http_path: /vmstat
+  description: vmstat
+  command: vmstat
+  args: []
+
+- http_path: /w
+  description: w
+  command: w
+  args: []
+
+static_paths:
+
+- http_path: /style.css
+  fs_path: style.css
+  content_type: text/css
+  include_in_main_page: false
+
+- http_path: /favicon.ico
+  fs_path: raspberrypi-favicon.ico
+  content_type: image/x-icon
+  include_in_main_page: false
