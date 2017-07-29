@@ -2,6 +2,8 @@ listen_address: 127.0.0.1:8080
 
 main_page_title: Rusty Web
 
+threads: 8
+
 commands:
 
 - http_path: /ifconfig
@@ -18,4 +20,5 @@ static_paths:
 
 - http_path: /style.css
   fs_path: resources/style.css
+  content_type: text/css
   include_in_main_page: false

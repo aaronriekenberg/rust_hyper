@@ -4,6 +4,7 @@ extern crate hyper;
 extern crate futures;
 extern crate futures_cpupool;
 #[macro_use] extern crate log;
+extern crate mime;
 extern crate simple_logger;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
@@ -22,6 +23,8 @@ use horrorshow::Template;
 use hyper::StatusCode;
 use hyper::header::{ContentLength, ContentType};
 use hyper::server::{Http, Service, Request, Response};
+
+use mime::Mime;
 
 use std::collections::HashMap;
 use std::env;
@@ -67,16 +70,16 @@ impl Service for ThreadedServer {
   type Future = futures::BoxFuture<Response, hyper::Error>;
 
   fn call(&self, req: Request) -> Self::Future {
-    info!("begin call thread {:?}", thread::current().name());
+    debug!("begin call thread {:?}", thread::current().name());
 
     let route_configuration = Arc::clone(&self.route_configuration);
 
     let result = self.cpu_pool.spawn_fn(move || {
 
-      info!("do_in_thread thread {:?} req {:?}", thread::current().name(), req);
+      debug!("do_in_thread thread {:?} req {:?}", thread::current().name(), req);
 
       let path = req.uri().path();
-      info!("path = '{}'", path);
+      debug!("path = '{}'", path);
 
       let mut response_option = None;
 
@@ -96,7 +99,7 @@ impl Service for ThreadedServer {
 
     }).boxed();
 
-    info!("end call thread {:?}", thread::current().name());
+    debug!("end call thread {:?}", thread::current().name());
 
     result
   }
@@ -115,6 +118,7 @@ struct CommandInfo {
 struct StaticPathInfo {
   http_path: String,
   fs_path: String,
+  content_type: String,
   include_in_main_page: bool
 }
 
@@ -122,6 +126,7 @@ struct StaticPathInfo {
 struct Configuration {
   listen_address: String,
   main_page_title: String,
+  threads: usize,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
 }
@@ -317,6 +322,53 @@ impl RequestHandler for CommandHandler {
 
 }
 
+struct StaticFileHandler {
+  file_path: String,
+  mime_type: Mime
+}
+
+impl StaticFileHandler {
+
+  pub fn new(file_path: String, mime_type: Mime) -> StaticFileHandler {
+    StaticFileHandler { 
+      file_path: file_path,
+      mime_type: mime_type
+    }
+  }
+
+  fn read_file(&self) -> Result<String, Box<Error>> {
+    let mut file = File::open(&self.file_path)?;
+
+    let mut file_contents = String::new();
+
+    file.read_to_string(&mut file_contents)?;
+
+    Ok(file_contents)
+  }
+
+}
+
+impl RequestHandler for StaticFileHandler {
+
+  fn handle(&self, _: &Request) -> Response {
+    match self.read_file() {
+      Ok(file_contents) => {
+        build_response(
+          StatusCode::Ok,
+          file_contents,
+          ContentType(self.mime_type.clone()))
+      },
+      Err(_) => {
+        build_response(
+          StatusCode::InternalServerError,
+          String::new(),
+          ContentType(self.mime_type.clone()))
+      }
+    }
+  }
+
+}
+
 fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> {
   let mut routes : HashMap<String, Box<RequestHandler>> = HashMap::new();
 
@@ -326,6 +378,12 @@ fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> 
   for command_info in &config.commands {
     let handler = CommandHandler::new(command_info.clone());
     routes.insert(command_info.http_path.clone(), Box::new(handler));
+  }
+
+  for static_path_info in &config.static_paths {
+    let mime_type = static_path_info.content_type.parse().expect("invalid mime type");
+    let handler = StaticFileHandler::new(static_path_info.fs_path.clone(), mime_type);
+    routes.insert(static_path_info.http_path.clone(), Box::new(handler));
   }
 
   Arc::new(RouteConfiguration { routes: routes })
@@ -343,7 +401,10 @@ fn main() {
 
   let route_configuration = build_route_configuration(&config);
 
-  let cpu_pool = futures_cpupool::Builder::new().name_prefix("server-").create();
+  let cpu_pool = futures_cpupool::Builder::new()
+    .pool_size(config.threads)
+    .name_prefix("server-")
+    .create();
 
   let http_server = Http::new()
     .bind(&listen_addr, move || Ok(
@@ -354,7 +415,9 @@ fn main() {
     ))
     .expect("bind failed");
 
-  info!("Listening on http://{} with cpu pool", http_server.local_addr().unwrap());
+  info!("Listening on http://{} with cpu pool size {}",
+        http_server.local_addr().unwrap(),
+        config.threads);
 
   http_server.run().expect("http_server.run failed");
 }
