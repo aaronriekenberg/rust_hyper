@@ -21,7 +21,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{ContentLength, ContentType};
+use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, HttpDate, IfModifiedSince, LastModified};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -29,6 +29,7 @@ use mime::Mime;
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
+use std::fs;
 use std::fs::File;
 use std::io::Read;
 use std::process::Command;
@@ -352,6 +353,11 @@ impl StaticFileHandler {
     }
   }
 
+  fn get_metadata(&self) -> Result<fs::Metadata, Box<Error>> {
+    let metadata = fs::metadata(&self.file_path)?;
+    Ok(metadata)
+  }
+
   fn read_file(&self) -> Result<Vec<u8>, Box<Error>> {
     let mut file = File::open(&self.file_path)?;
 
@@ -366,13 +372,36 @@ impl StaticFileHandler {
 
 impl RequestHandler for StaticFileHandler {
 
-  fn handle(&self, _: &Request) -> Response {
+  fn handle(&self, req: &Request) -> Response {
+    let file_metadata =
+      match self.get_metadata() {
+        Ok(metadata) => metadata,
+        Err(_) => return build_response_status(StatusCode::InternalServerError)
+      };
+
+    let file_modified: HttpDate = 
+      match file_metadata.modified() {
+        Ok(file_modified) => file_modified.into(),
+        Err(_) => return build_response_status(StatusCode::InternalServerError)
+      };
+
+    let if_modified_since_header_option: Option<&IfModifiedSince> =
+      req.headers().get();
+
+    if let Some(if_modified_since_header) = if_modified_since_header_option {
+      if file_modified <= if_modified_since_header.0 {
+        return build_response_status(StatusCode::NotModified);
+      }
+    }
+
     match self.read_file() {
       Ok(file_contents) => {
         build_response_vec(
           StatusCode::Ok,
           file_contents,
           ContentType(self.mime_type.clone()))
+          .with_header(LastModified(file_modified))
+          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
       },
       Err(_) => {
         build_response_status(StatusCode::InternalServerError)
