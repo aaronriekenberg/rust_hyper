@@ -10,18 +10,42 @@ use futures::Future;
 
 use futures_cpupool::CpuPool;
 
+use hyper::StatusCode;
 use hyper::header::{ContentLength, ContentType};
 use hyper::server::{Http, Service, Request, Response};
 
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::thread;
 
-static PHRASE: &'static [u8] = b"Hello World!";
+static NOT_FOUND_BODY: &'static str = "Route Not Found";
 
-struct Server {
-  cpu_pool: CpuPool
+trait RequestHandler : Send + Sync {
+  fn call(&self, req: &Request) -> Response;
 }
 
-impl Service for Server {
+struct RouteConfiguration {
+  routes: HashMap<String, Box<RequestHandler>>
+}
+
+fn build_response(
+  status_code: StatusCode,
+  body: String,
+  content_type: ContentType) -> Response
+{
+  Response::new()
+    .with_status(status_code)
+    .with_header(ContentLength(body.len() as u64))
+    .with_header(content_type)
+    .with_body(body)
+}
+
+struct ThreadedServer {
+  cpu_pool: CpuPool,
+  route_configuration: Arc<RouteConfiguration>
+}
+
+impl Service for ThreadedServer {
 
   type Request = Request;
   type Response = Response;
@@ -31,15 +55,30 @@ impl Service for Server {
   fn call(&self, req: Request) -> Self::Future {
     info!("begin call thread {:?}", thread::current().name());
 
+    let route_configuration = Arc::clone(&self.route_configuration);
+
     let result = self.cpu_pool.spawn_fn(move || {
 
       info!("do_in_thread thread {:?} req {:?}", thread::current().name(), req);
-      info!("req.uri.path = {}", req.uri().path());
 
-      Ok(Response::new()
-        .with_header(ContentLength(PHRASE.len() as u64))
-        .with_header(ContentType::plaintext())
-        .with_body(PHRASE))
+      let path = req.uri().path();
+      info!("path = '{}'", path);
+
+      let mut response_option = None;
+
+      if let Some(request_handler) = route_configuration.routes.get(path) {
+        response_option = Some(request_handler.call(&req));
+      }
+
+      match response_option {
+        Some(response) => Ok(response),
+        None => {
+          Ok(build_response(
+               StatusCode::NotFound,
+               NOT_FOUND_BODY.to_string(),
+               ContentType::plaintext()))
+        }
+      }
 
     }).boxed();
 
@@ -50,15 +89,44 @@ impl Service for Server {
 
 }
 
+struct IndexHandler;
+
+impl RequestHandler for IndexHandler {
+
+  fn call(&self, _: &Request) -> Response {
+    let body_string = String::from("<html><body><h1>Index Page</h1></body></html>");
+    build_response(
+      StatusCode::Ok,
+      body_string,
+      ContentType::html())
+  }
+
+}
+
+fn build_route_configuration() -> RouteConfiguration {
+  let mut routes : HashMap<String, Box<RequestHandler>> = HashMap::new();
+
+  routes.insert("/".to_string(), Box::new(IndexHandler));
+
+  RouteConfiguration { routes: routes }
+}
+
 fn main() {
   simple_logger::init_with_level(LogLevel::Info).expect("init_with_level failed");
 
   let addr = "0.0.0.0:1337".parse().unwrap();
 
+  let route_configuration = Arc::new(build_route_configuration());
+
   let cpu_pool = futures_cpupool::Builder::new().name_prefix("server-").create();
 
   let http_server = Http::new()
-    .bind(&addr, move || Ok(Server { cpu_pool: cpu_pool.clone() } ))
+    .bind(&addr, move || Ok(
+      ThreadedServer { 
+        cpu_pool: cpu_pool.clone(),
+        route_configuration: Arc::clone(&route_configuration)
+      }
+    ))
     .expect("bind failed");
 
   info!("Listening on http://{} with cpu pool", http_server.local_addr().unwrap());
