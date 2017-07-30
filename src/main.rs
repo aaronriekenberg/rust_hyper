@@ -412,7 +412,7 @@ impl RequestHandler for StaticFileHandler {
          systemtime_in_seconds(&if_modified_since) {
         return build_response_status(StatusCode::NotModified)
           .with_header(LastModified(file_modified.into()))
-          .with_header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::MaxAge(0)]));
+          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]));
       }
     }
 
@@ -423,7 +423,7 @@ impl RequestHandler for StaticFileHandler {
           file_contents,
           ContentType(self.mime_type.clone()))
           .with_header(LastModified(file_modified.into()))
-          .with_header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::MaxAge(0)]))
+          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
       },
       Err(_) => {
         build_response_status(StatusCode::InternalServerError)
