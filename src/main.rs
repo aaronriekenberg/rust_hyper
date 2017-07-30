@@ -21,7 +21,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, IfModifiedSince, LastModified};
+use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, IfModifiedSince, LastModified, Referer, UserAgent};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -87,6 +87,49 @@ fn systemtime_in_seconds(st: &std::time::SystemTime) -> i64 {
   }
 }
 
+fn log_request_and_response(
+  req: &Request,
+  resp: &Response) {
+
+  let mut log_string = String::with_capacity(200);
+
+  if let Some(remote_addr) = req.remote_addr() {
+    log_string.push_str(&remote_addr.to_string());
+    log_string.push(' ');
+  }
+
+  log_string.push('"');
+  log_string.push_str(&req.method().to_string());
+  log_string.push(' ');
+  log_string.push_str(&req.uri().to_string());
+  log_string.push(' ');
+  log_string.push_str(&req.version().to_string());
+  log_string.push('"');
+
+  log_string.push(' ');
+  log_string.push_str(&resp.status().as_u16().to_string());
+
+  log_string.push(' ');
+  log_string.push('"');
+  let referrer_header_option: Option<&Referer> =
+    req.headers().get();
+  if let Some(referrer_header) = referrer_header_option {
+    log_string.push_str(&referrer_header);
+  }
+  log_string.push('"');
+
+  log_string.push(' ');
+  log_string.push('"');
+  let user_agent_header_option: Option<&UserAgent> =
+    req.headers().get();
+  if let Some(user_agent_header) = user_agent_header_option {
+    log_string.push_str(&user_agent_header);
+  }
+  log_string.push('"');
+
+  info!("{}", log_string);
+}
+
 struct ThreadedServer {
   cpu_pool: CpuPool,
   route_configuration: Arc<RouteConfiguration>
@@ -126,7 +169,7 @@ impl Service for ThreadedServer {
             ContentType::plaintext())
       };
 
-      info!("response {:?}", response);
+      log_request_and_response(&req, &response);
 
       Ok(response)
 
