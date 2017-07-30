@@ -1,4 +1,4 @@
-listen_address: :::8081
+listen_address: 0.0.0.0:8081
 
 main_page_title: Aaron's Raspberry Pi
 
