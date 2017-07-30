@@ -110,6 +110,15 @@ fn log_request_and_response(
   log_string.push_str(&resp.status().as_u16().to_string());
 
   log_string.push(' ');
+  let content_length_header_option: Option<&ContentLength> =
+    resp.headers().get();
+  if let Some(content_length_header) = content_length_header_option {
+    log_string.push_str(&content_length_header.0.to_string());
+  } else {
+    log_string.push('0');
+  }
+
+  log_string.push(' ');
   log_string.push('"');
   let referrer_header_option: Option<&Referer> =
     req.headers().get();
