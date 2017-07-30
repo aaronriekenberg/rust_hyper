@@ -21,7 +21,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{ContentLength, ContentType, IfModifiedSince, LastModified};
+use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, IfModifiedSince, LastModified};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -117,17 +117,18 @@ impl Service for ThreadedServer {
         response_option = Some(request_handler.handle(&req));
       }
 
-      debug!("response_option = {:?}", response_option);
+      let response = match response_option {
+        Some(response) => response,
+        None =>
+          build_response_string(
+            StatusCode::NotFound,
+            NOT_FOUND_BODY.to_string(),
+            ContentType::plaintext())
+      };
 
-      match response_option {
-        Some(response) => Ok(response),
-        None => {
-          Ok(build_response_string(
-               StatusCode::NotFound,
-               NOT_FOUND_BODY.to_string(),
-               ContentType::plaintext()))
-        }
-      }
+      info!("response {:?}", response);
+
+      Ok(response)
 
     }).boxed();
 
@@ -410,7 +411,8 @@ impl RequestHandler for StaticFileHandler {
       if systemtime_in_seconds(&file_modified) <=
          systemtime_in_seconds(&if_modified_since) {
         return build_response_status(StatusCode::NotModified)
-          .with_header(LastModified(file_modified.into()));
+          .with_header(LastModified(file_modified.into()))
+          .with_header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::MaxAge(0)]));
       }
     }
 
@@ -421,6 +423,7 @@ impl RequestHandler for StaticFileHandler {
           file_contents,
           ContentType(self.mime_type.clone()))
           .with_header(LastModified(file_modified.into()))
+          .with_header(CacheControl(vec![CacheDirective::NoCache, CacheDirective::MaxAge(0)]))
       },
       Err(_) => {
         build_response_status(StatusCode::InternalServerError)
