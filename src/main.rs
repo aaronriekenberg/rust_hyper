@@ -152,6 +152,7 @@ struct StaticPathInfo {
   http_path: String,
   fs_path: String,
   content_type: String,
+  cache_max_age_seconds: u32,
   include_in_main_page: bool
 }
 
@@ -184,7 +185,7 @@ struct IndexHandler {
 
 impl IndexHandler {
 
-  pub fn new(config: &Configuration) -> Result<IndexHandler, Box<Error>> {
+  pub fn new(config: &Configuration) -> Result<Self, Box<Error>> {
 
     let static_paths_to_include: Vec<_> = 
       config.static_paths.iter().filter(|s| s.include_in_main_page).collect();
@@ -261,7 +262,7 @@ struct CommandHandler {
 
 impl CommandHandler {
 
-  pub fn new(command_info: CommandInfo) -> CommandHandler {
+  pub fn new(command_info: CommandInfo) -> Self {
 
     let mut command_line_string = String::new();
 
@@ -357,15 +358,17 @@ impl RequestHandler for CommandHandler {
 
 struct StaticFileHandler {
   file_path: String,
-  mime_type: Mime
+  mime_type: Mime,
+  cache_max_age_seconds: u32
 }
 
 impl StaticFileHandler {
 
-  pub fn new(file_path: String, mime_type: Mime) -> StaticFileHandler {
+  pub fn new(file_path: String, mime_type: Mime, cache_max_age_seconds: u32) -> Self {
     StaticFileHandler { 
       file_path: file_path,
-      mime_type: mime_type
+      mime_type: mime_type,
+      cache_max_age_seconds: cache_max_age_seconds
     }
   }
 
@@ -411,8 +414,7 @@ impl RequestHandler for StaticFileHandler {
       if systemtime_in_seconds(&file_modified) <=
          systemtime_in_seconds(&if_modified_since) {
         return build_response_status(StatusCode::NotModified)
-          .with_header(LastModified(file_modified.into()))
-          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]));
+          .with_header(LastModified(file_modified.into()));
       }
     }
 
@@ -423,7 +425,9 @@ impl RequestHandler for StaticFileHandler {
           file_contents,
           ContentType(self.mime_type.clone()))
           .with_header(LastModified(file_modified.into()))
-          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
+          .with_header(CacheControl(
+             vec![CacheDirective::MaxAge(self.cache_max_age_seconds),
+                  CacheDirective::Public]))
       },
       Err(_) => {
         build_response_status(StatusCode::InternalServerError)
@@ -446,7 +450,10 @@ fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> 
 
   for static_path_info in &config.static_paths {
     let mime_type = static_path_info.content_type.parse().expect("invalid mime type");
-    let handler = StaticFileHandler::new(static_path_info.fs_path.clone(), mime_type);
+    let handler = StaticFileHandler::new(
+      static_path_info.fs_path.clone(),
+      mime_type,
+      static_path_info.cache_max_age_seconds);
     routes.insert(static_path_info.http_path.clone(), Box::new(handler));
   }
 

@@ -21,4 +21,5 @@ static_paths:
 - http_path: /style.css
   fs_path: resources/style.css
   content_type: text/css
+  cache_max_age_seconds: 3600
   include_in_main_page: false
