@@ -21,7 +21,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, IfModifiedSince, LastModified};
+use hyper::header::{ContentLength, ContentType, IfModifiedSince, LastModified};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -410,8 +410,7 @@ impl RequestHandler for StaticFileHandler {
       if systemtime_in_seconds(&file_modified) <=
          systemtime_in_seconds(&if_modified_since) {
         return build_response_status(StatusCode::NotModified)
-          .with_header(LastModified(file_modified.into()))
-          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]));
+          .with_header(LastModified(file_modified.into()));
       }
     }
 
@@ -422,7 +421,6 @@ impl RequestHandler for StaticFileHandler {
           file_contents,
           ContentType(self.mime_type.clone()))
           .with_header(LastModified(file_modified.into()))
-          .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
       },
       Err(_) => {
         build_response_status(StatusCode::InternalServerError)
