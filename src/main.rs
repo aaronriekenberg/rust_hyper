@@ -481,7 +481,7 @@ fn initialize_logging() -> Result<(), fern::InitError>{
     .format(|out, message, record| {
       out.finish(
         format_args!("{} [{}] {} {} - {}",
-          Local::now().format("%Y-%m-%d %H:%M:%S%.3f %z").to_string(),
+          Local::now().format("%Y-%m-%d %H:%M:%S%.3f %z"),
           thread::current().name().unwrap_or("UNKNOWN"),
           record.level(),
           record.target(),
