@@ -90,11 +90,14 @@ fn log_request_and_response(
   req: &Request,
   resp: &Response) {
 
-  let mut log_string = String::with_capacity(200);
+  let mut log_string = String::with_capacity(300);
 
-  if let Some(remote_addr) = req.remote_addr() {
-    log_string.push_str(&remote_addr.to_string());
-    log_string.push(' ');
+  match req.remote_addr() {
+    Some(remote_addr) => {
+      log_string.push_str(&remote_addr.to_string());
+      log_string.push(' ');
+    },
+    None => {}
   }
 
   log_string.push('"');
@@ -109,29 +112,24 @@ fn log_request_and_response(
   log_string.push_str(&resp.status().as_u16().to_string());
 
   log_string.push(' ');
-  let content_length_header_option: Option<&ContentLength> =
-    resp.headers().get();
-  if let Some(content_length_header) = content_length_header_option {
-    log_string.push_str(&content_length_header.0.to_string());
-  } else {
-    log_string.push('0');
+  match resp.headers().get::<ContentLength>() {
+    Some(content_length_header) => log_string.push_str(&content_length_header.0.to_string()),
+    None => log_string.push('0')
   }
 
   log_string.push(' ');
   log_string.push('"');
-  let referrer_header_option: Option<&Referer> =
-    req.headers().get();
-  if let Some(referrer_header) = referrer_header_option {
-    log_string.push_str(&referrer_header);
+  match req.headers().get::<Referer>() {
+    Some(referrer_header) => log_string.push_str(&referrer_header),
+    None => {}
   }
   log_string.push('"');
 
   log_string.push(' ');
   log_string.push('"');
-  let user_agent_header_option: Option<&UserAgent> =
-    req.headers().get();
-  if let Some(user_agent_header) = user_agent_header_option {
-    log_string.push_str(&user_agent_header);
+  match req.headers().get::<UserAgent>() {
+    Some(user_agent_header) => log_string.push_str(&user_agent_header),
+    None => {}
   }
   log_string.push('"');
 
@@ -162,14 +160,8 @@ impl Service for ThreadedServer {
       let path = req.uri().path();
       debug!("path = '{}'", path);
 
-      let mut response_option = None;
-
-      if let Some(request_handler) = route_configuration.routes.get(path) {
-        response_option = Some(request_handler.handle(&req));
-      }
-
-      let response = match response_option {
-        Some(response) => response,
+      let response = match route_configuration.routes.get(path) {
+        Some(request_handler) => request_handler.handle(&req),
         None =>
           build_response_string(
             StatusCode::NotFound,
