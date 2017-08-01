@@ -1,17 +1,15 @@
 extern crate chrono;
 extern crate hyper;
 #[macro_use] extern crate horrorshow;
+extern crate fern;
 extern crate futures;
 extern crate futures_cpupool;
 #[macro_use] extern crate log;
 extern crate mime;
-extern crate simple_logger;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
 
 use chrono::prelude::Local;
-
-use log::LogLevel;
 
 use futures::Future;
 
@@ -31,6 +29,7 @@ use std::env;
 use std::error::Error;
 use std::fs;
 use std::fs::File;
+use std::io;
 use std::io::Read;
 use std::process::Command;
 use std::sync::Arc;
@@ -215,20 +214,6 @@ struct Configuration {
   threads: usize,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
-}
-
-fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
-  info!("reading {}", config_file);
-
-  let mut file = File::open(config_file)?;
-
-  let mut file_contents = String::new();
-
-  file.read_to_string(&mut file_contents)?;
-
-  let configuration: Configuration = serde_yaml::from_str(&file_contents)?;
-
-  Ok(configuration)
 }
 
 struct IndexHandler {
@@ -489,6 +474,42 @@ impl RequestHandler for StaticFileHandler {
 
 }
 
+fn initialize_logging() -> Result<(), fern::InitError>{
+  fern::Dispatch::new()
+    .level(log::LogLevelFilter::Info)
+    .level_for("hyper::http::request", log::LogLevelFilter::Warn)
+    .format(|out, message, record| {
+      out.finish(
+        format_args!("{} [{}] {} {} - {}",
+          Local::now().format("%Y-%m-%d %H:%M:%S%.3f %z").to_string(),
+          thread::current().name().unwrap_or("UNKNOWN"),
+          record.level(),
+          record.target(),
+          message
+        )
+      )
+    })
+    .chain(io::stdout())
+    .apply()?;
+
+  Ok(())
+}
+
+fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
+  info!("reading {}", config_file);
+
+  let mut file = File::open(config_file)?;
+
+  let mut file_contents = String::new();
+
+  file.read_to_string(&mut file_contents)?;
+
+  let configuration: Configuration = serde_yaml::from_str(&file_contents)?;
+
+  Ok(configuration)
+}
+
+
 fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> {
   let mut routes : HashMap<String, Box<RequestHandler>> = HashMap::new();
 
@@ -513,7 +534,7 @@ fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> 
 }
 
 fn main() {
-  simple_logger::init_with_level(LogLevel::Info).expect("init_with_level failed");
+  initialize_logging().expect("failed to initialize logging");
 
   let config_file = env::args().nth(1).expect("config file required as command line argument");
 

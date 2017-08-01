@@ -3,6 +3,7 @@ name = "rust_hyper"
 version = "0.1.0"
 dependencies = [
  "chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fern 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures-cpupool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "horrorshow 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -12,7 +13,6 @@ dependencies = [
  "serde 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_derive 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde_yaml 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "simple_logger 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -50,6 +50,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "num 0.1.40 (registry+https://github.com/rust-lang/crates.io-index)",
  "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "fern"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
@@ -315,15 +323,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "simple_logger"
-version = "0.4.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-dependencies = [
- "log 0.3.8 (registry+https://github.com/rust-lang/crates.io-index)",
- "time 0.1.38 (registry+https://github.com/rust-lang/crates.io-index)",
-]
-
-[[package]]
 name = "slab"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -463,6 +462,7 @@ dependencies = [
 "checksum bytes 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "8b24f16593f445422331a5eed46b72f7f171f910fead4f2ea8f17e727e9c5c14"
 "checksum cfg-if 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d4c819a1287eb618df47cc647173c5c4c66ba19d888a6e50d605672aed3140de"
 "checksum chrono 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "7c20ebe0b2b08b0aeddba49c609fe7957ba2e33449882cb186a180bc60682fa9"
+"checksum fern 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "89273e0d0e210f69600048a209a00e163560b51e3ef51c3942304e9b8aa8b47a"
 "checksum futures 0.1.14 (registry+https://github.com/rust-lang/crates.io-index)" = "4b63a4792d4f8f686defe3b39b92127fea6344de5d38202b2ee5a11bbbf29d6a"
 "checksum futures-cpupool 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "a283c84501e92cade5ea673a2a7ca44f71f209ccdd302a3e0896f50083d2c5ff"
 "checksum horrorshow 0.6.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d587765115bf4e613f0c88e3fcad077dc9b1a339de89912f6a75f21049938bce"
@@ -497,7 +497,6 @@ dependencies = [
 "checksum serde_derive 1.0.11 (registry+https://github.com/rust-lang/crates.io-index)" = "cf823e706be268e73e7747b147aa31c8f633ab4ba31f115efb57e5047c3a76dd"
 "checksum serde_derive_internals 0.15.1 (registry+https://github.com/rust-lang/crates.io-index)" = "37aee4e0da52d801acfbc0cc219eb1eda7142112339726e427926a6f6ee65d3a"
 "checksum serde_yaml 0.7.1 (registry+https://github.com/rust-lang/crates.io-index)" = "49d983aa39d2884a4b422bb11bb38f4f48fa05186e17469bc31e47d01e381111"
-"checksum simple_logger 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)" = "d5a3b341928cec79e536fe62b75bfe2e35891a5e65801ebfbd2741dddf7d7fac"
 "checksum slab 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)" = "17b4fcaed89ab08ef143da37bc52adbcc04d4a69014f4c1208d6b51f0c47bc23"
 "checksum smallvec 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "4c8cbcd6df1e117c2210e13ab5109635ad68a929fcbb8964dc965b76cb5ee013"
 "checksum syn 0.11.11 (registry+https://github.com/rust-lang/crates.io-index)" = "d3b891b9015c88c576343b9b3e41c2c11a51c219ef067b264bd9c8aa9b441dad"
