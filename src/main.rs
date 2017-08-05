@@ -378,6 +378,8 @@ impl RequestHandler for CommandHandler {
       StatusCode::Ok,
       html_string,
       ContentType::html())
+      .with_header(CacheControl(
+         vec![CacheDirective::MaxAge(0)]))
   }
 
 }
