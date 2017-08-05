@@ -10,6 +10,7 @@ extern crate mime;
 extern crate serde_yaml;
 
 use chrono::prelude::Local;
+use chrono::TimeZone;
 
 use futures::Future;
 
@@ -74,10 +75,28 @@ fn build_response_vec(
     .with_body(body)
 }
 
-fn systemtime_in_seconds(st: &std::time::SystemTime) -> i64 {
+fn current_time_string() -> String {
+  let now = Local::now();
+  now.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
+}
+
+fn systemtime_to_string(st: &std::time::SystemTime) -> String {
+  let local_time =
+    match st.duration_since(UNIX_EPOCH) {
+      Ok(dur) => {
+        Local.timestamp(dur.as_secs() as i64, dur.subsec_nanos())
+      },
+      Err(_) => {
+        Local.timestamp(0, 0)
+      }
+    };
+  local_time.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
+}
+
+fn systemtime_in_seconds(st: &std::time::SystemTime) -> u64 {
   match st.duration_since(UNIX_EPOCH) {
     Ok(dur) => {
-      dur.as_secs() as i64
+      dur.as_secs()
     },
     Err(_) => 0
   }
@@ -244,6 +263,12 @@ impl IndexHandler {
     let static_paths_to_include: Vec<_> = 
       config.static_paths.iter().filter(|s| s.include_in_main_page).collect();
 
+    let now = SystemTime::now();
+
+    let mut last_modified_string = String::new();
+    last_modified_string.push_str("Last Modified: ");
+    last_modified_string.push_str(&systemtime_to_string(&now));
+
     let s = html! {
       : doctype::HTML;
       html {
@@ -284,13 +309,17 @@ impl IndexHandler {
               }
             }
           }
+          hr;
+          small {
+            : &last_modified_string
+          }
         }
       }
     }.into_string()?;
 
     Ok(IndexHandler { 
       index_string: s,
-      creation_time: SystemTime::now(),
+      creation_time: now,
       cache_max_age_seconds: config.main_page_cache_max_age_seconds
     })
   }
@@ -316,11 +345,6 @@ impl RequestHandler for IndexHandler {
               CacheDirective::MaxAge(self.cache_max_age_seconds)]))
   }
 
-}
-
-fn current_time_string() -> String {
-  let now = Local::now();  
-  now.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
 }
 
 struct CommandHandler {
