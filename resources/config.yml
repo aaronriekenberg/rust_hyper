@@ -2,6 +2,8 @@ listen_address: 127.0.0.1:8080
 
 main_page_title: Rusty Web
 
+main_page_cache_max_age_seconds: 3600
+
 threads: 8
 
 commands:

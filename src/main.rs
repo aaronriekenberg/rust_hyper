@@ -19,7 +19,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, IfModifiedSince, LastModified, Referer, UserAgent};
+use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, HttpDate, IfModifiedSince, LastModified, Referer, UserAgent};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -81,6 +81,31 @@ fn systemtime_in_seconds(st: &std::time::SystemTime) -> i64 {
     },
     Err(_) => 0
   }
+}
+
+fn handle_if_modified_since(
+  req: &Request,
+  data_last_modified: &SystemTime,
+  cache_max_age_seconds: u32) -> Option<Response> {
+
+  match req.headers().get::<IfModifiedSince>() {
+    Some(if_modified_since_header) => {
+      let if_modified_since: SystemTime = if_modified_since_header.0.into();
+      if systemtime_in_seconds(&data_last_modified) <=
+         systemtime_in_seconds(&if_modified_since) {
+        let last_modified_htttp_date: HttpDate = (*data_last_modified).into();
+        return Some(
+          build_response_status(StatusCode::NotModified)
+            .with_header(LastModified(last_modified_htttp_date))
+            .with_header(CacheControl(
+                           vec![CacheDirective::Public,
+                                CacheDirective::MaxAge(cache_max_age_seconds)])));
+      }
+    },
+    None => {}
+  }
+
+  None
 }
 
 fn log_request_and_response(
@@ -200,13 +225,16 @@ struct StaticPathInfo {
 struct Configuration {
   listen_address: String,
   main_page_title: String,
+  main_page_cache_max_age_seconds: u32,
   threads: usize,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
 }
 
 struct IndexHandler {
-  index_string: String
+  index_string: String,
+  creation_time: SystemTime,
+  cache_max_age_seconds: u32
 }
 
 impl IndexHandler {
@@ -260,18 +288,32 @@ impl IndexHandler {
       }
     }.into_string()?;
 
-    Ok(IndexHandler { index_string: s })
+    Ok(IndexHandler { 
+      index_string: s,
+      creation_time: SystemTime::now(),
+      cache_max_age_seconds: config.main_page_cache_max_age_seconds
+    })
   }
 
 }
 
 impl RequestHandler for IndexHandler {
 
-  fn handle(&self, _: &Request) -> Response {
+  fn handle(&self, req: &Request) -> Response {
+    match handle_if_modified_since(
+      &req, &self.creation_time, self.cache_max_age_seconds) {
+      Some(response) => return response,
+      None => {}
+    }
+
     build_response_string(
       StatusCode::Ok,
       self.index_string.clone(),
       ContentType::html())
+      .with_header(LastModified(self.creation_time.into()))
+      .with_header(CacheControl(
+         vec![CacheDirective::Public,
+              CacheDirective::MaxAge(self.cache_max_age_seconds)]))
   }
 
 }
@@ -434,15 +476,9 @@ impl RequestHandler for StaticFileHandler {
         Err(_) => return build_response_status(StatusCode::NotFound)
       };
 
-    match req.headers().get::<IfModifiedSince>() {
-      Some(if_modified_since_header) => {
-        let if_modified_since: SystemTime = if_modified_since_header.0.into();
-        if systemtime_in_seconds(&file_modified) <=
-           systemtime_in_seconds(&if_modified_since) {
-          return build_response_status(StatusCode::NotModified)
-            .with_header(LastModified(file_modified.into()));
-        }
-      },
+    match handle_if_modified_since(
+      &req, &file_modified, self.cache_max_age_seconds) {
+      Some(response) => return response,
       None => {}
     }
 
