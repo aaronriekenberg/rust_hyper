@@ -79,10 +79,7 @@ fn systemtime_in_seconds(st: &std::time::SystemTime) -> i64 {
     Ok(dur) => {
       dur.as_secs() as i64
     },
-    Err(err) => {
-      let neg = err.duration();
-      -(neg.as_secs() as i64)
-    }
+    Err(_) => 0
   }
 }
 
