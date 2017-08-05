@@ -112,10 +112,10 @@ fn handle_if_modified_since(
       let if_modified_since: SystemTime = if_modified_since_header.0.into();
       if systemtime_in_seconds(&data_last_modified) <=
          systemtime_in_seconds(&if_modified_since) {
-        let last_modified_htttp_date: HttpDate = (*data_last_modified).into();
+        let last_modified_http_date: HttpDate = (*data_last_modified).into();
         return Some(
           build_response_status(StatusCode::NotModified)
-            .with_header(LastModified(last_modified_htttp_date))
+            .with_header(LastModified(last_modified_http_date))
             .with_header(CacheControl(
                            vec![CacheDirective::Public,
                                 CacheDirective::MaxAge(cache_max_age_seconds)])));
