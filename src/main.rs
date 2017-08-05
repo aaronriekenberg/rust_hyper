@@ -423,25 +423,25 @@ impl RequestHandler for StaticFileHandler {
     let file_metadata =
       match self.get_metadata() {
         Ok(metadata) => metadata,
-        Err(_) => return build_response_status(StatusCode::InternalServerError)
+        Err(_) => return build_response_status(StatusCode::NotFound)
       };
 
     let file_modified =
       match file_metadata.modified() {
         Ok(file_modified) => file_modified,
-        Err(_) => return build_response_status(StatusCode::InternalServerError)
+        Err(_) => return build_response_status(StatusCode::NotFound)
       };
 
-    let if_modified_since_header_option: Option<&IfModifiedSince> =
-      req.headers().get();
-
-    if let Some(if_modified_since_header) = if_modified_since_header_option {
-      let if_modified_since: SystemTime = if_modified_since_header.0.into();
-      if systemtime_in_seconds(&file_modified) <=
-         systemtime_in_seconds(&if_modified_since) {
-        return build_response_status(StatusCode::NotModified)
-          .with_header(LastModified(file_modified.into()));
-      }
+    match req.headers().get::<IfModifiedSince>() {
+      Some(if_modified_since_header) => {
+        let if_modified_since: SystemTime = if_modified_since_header.0.into();
+        if systemtime_in_seconds(&file_modified) <=
+           systemtime_in_seconds(&if_modified_since) {
+          return build_response_status(StatusCode::NotModified)
+            .with_header(LastModified(file_modified.into()));
+        }
+      },
+      None => {}
     }
 
     match self.read_file() {
@@ -452,11 +452,11 @@ impl RequestHandler for StaticFileHandler {
           ContentType(self.mime_type.clone()))
           .with_header(LastModified(file_modified.into()))
           .with_header(CacheControl(
-             vec![CacheDirective::MaxAge(self.cache_max_age_seconds),
-                  CacheDirective::Public]))
+             vec![CacheDirective::Public,
+                  CacheDirective::MaxAge(self.cache_max_age_seconds)]))
       },
       Err(_) => {
-        build_response_status(StatusCode::InternalServerError)
+        build_response_status(StatusCode::NotFound)
       }
     }
   }
