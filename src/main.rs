@@ -466,11 +466,6 @@ impl StaticFileHandler {
     }
   }
 
-  fn get_metadata(&self) -> Result<fs::Metadata, Box<Error>> {
-    let metadata = fs::metadata(&self.file_path)?;
-    Ok(metadata)
-  }
-
   fn read_file(&self) -> Result<Vec<u8>, Box<Error>> {
     let mut file = File::open(&self.file_path)?;
 
@@ -489,7 +484,7 @@ impl RequestHandler for StaticFileHandler {
     debug!("StaticFileHandler.handle req = {:?}", req);
 
     let file_metadata =
-      match self.get_metadata() {
+      match fs::metadata(&self.file_path) {
         Ok(metadata) => metadata,
         Err(_) => return build_response_status(StatusCode::NotFound)
       };
@@ -559,7 +554,6 @@ fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
 
   Ok(configuration)
 }
-
 
 fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> {
   let mut routes : HashMap<String, Box<RequestHandler>> = HashMap::new();
