@@ -107,7 +107,7 @@ fn systemtime_to_string(st: &std::time::SystemTime) -> String {
   local_time.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
 }
 
-fn systemtime_in_seconds(st: &std::time::SystemTime) -> u64 {
+fn systemtime_in_seconds_u64(st: &std::time::SystemTime) -> u64 {
   match st.duration_since(UNIX_EPOCH) {
     Ok(dur) => {
       dur.as_secs()
@@ -116,7 +116,7 @@ fn systemtime_in_seconds(st: &std::time::SystemTime) -> u64 {
   }
 }
 
-fn duration_in_seconds(duration: &std::time::Duration) -> f64 {
+fn duration_in_seconds_f64(duration: &std::time::Duration) -> f64 {
   (duration.as_secs() as f64) + ((duration.subsec_nanos() as f64) / 1e9)
 }
 
@@ -128,8 +128,8 @@ fn handle_if_modified_since(
   match req.headers().get::<IfModifiedSince>() {
     Some(if_modified_since_header) => {
       let if_modified_since: SystemTime = if_modified_since_header.0.into();
-      if systemtime_in_seconds(&data_last_modified) <=
-         systemtime_in_seconds(&if_modified_since) {
+      if systemtime_in_seconds_u64(&data_last_modified) <=
+         systemtime_in_seconds_u64(&if_modified_since) {
         let last_modified_http_date: HttpDate = (*data_last_modified).into();
         return Some(
           build_response_status(StatusCode::NotModified)
@@ -180,7 +180,7 @@ fn log_request_and_response(
 
   log_string.push(' ');
   log_string.push_str(
-    &format!("{:.9}", duration_in_seconds(&req_context.start_time.elapsed())));
+    &format!("{:.9}", duration_in_seconds_f64(&req_context.start_time.elapsed())));
   log_string.push('s');
 
   info!("{}", log_string);
@@ -208,7 +208,6 @@ impl Service for ThreadedServer {
       debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
 
       let path = req_context.req.path();
-      debug!("path = '{}'", path);
 
       let response = match route_configuration.routes.get(path) {
         Some(request_handler) => request_handler.handle(&req_context),
@@ -224,8 +223,6 @@ impl Service for ThreadedServer {
       Ok(response)
 
     }).boxed();
-
-    debug!("end call thread {:?}", thread::current().name());
 
     result
   }
