@@ -20,7 +20,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{CacheControl,CacheDirective,ContentLength,ContentType,HttpDate,IfModifiedSince,LastModified,Referer};
+use hyper::header::{CacheControl,CacheDirective,ContentLength,ContentType,HttpDate,IfModifiedSince,LastModified};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -151,7 +151,7 @@ fn log_request_and_response(
 
   let req = &req_context.req;
 
-  let mut log_string = String::with_capacity(300);
+  let mut log_string = String::with_capacity(100);
 
   match req.remote_addr() {
     Some(remote_addr) => {
@@ -177,14 +177,6 @@ fn log_request_and_response(
     Some(content_length_header) => log_string.push_str(&content_length_header.0.to_string()),
     None => log_string.push('0')
   }
-
-  log_string.push(' ');
-  log_string.push('"');
-  match req.headers().get::<Referer>() {
-    Some(referrer_header) => log_string.push_str(&referrer_header),
-    None => {}
-  }
-  log_string.push('"');
 
   log_string.push(' ');
   log_string.push_str(
