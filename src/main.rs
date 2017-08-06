@@ -20,7 +20,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{CacheControl, CacheDirective, ContentLength, ContentType, HttpDate, IfModifiedSince, LastModified, Referer, UserAgent};
+use hyper::header::{CacheControl,CacheDirective,ContentLength,ContentType,HttpDate,IfModifiedSince,LastModified,Referer};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -34,13 +34,27 @@ use std::io;
 use std::io::Read;
 use std::process::Command;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::thread;
 
 static NOT_FOUND_BODY: &'static str = "Route Not Found";
 
+#[derive(Debug)]
+struct RequestContext {
+  req: Request,
+  start_time: Instant
+}
+
+impl RequestContext {
+
+  pub fn new(req: Request) -> Self {
+    RequestContext { req: req, start_time: Instant::now() }
+  }
+
+}
+
 trait RequestHandler : Send + Sync {
-  fn handle(&self, req: &Request) -> Response;
+  fn handle(&self, req_context: &RequestContext) -> Response;
 }
 
 struct RouteConfiguration {
@@ -102,6 +116,10 @@ fn systemtime_in_seconds(st: &std::time::SystemTime) -> u64 {
   }
 }
 
+fn duration_in_seconds(duration: &std::time::Duration) -> f64 {
+  (duration.as_secs() as f64) + ((duration.subsec_nanos() as f64) / 1e9)
+}
+
 fn handle_if_modified_since(
   req: &Request,
   data_last_modified: &SystemTime,
@@ -128,8 +146,10 @@ fn handle_if_modified_since(
 }
 
 fn log_request_and_response(
-  req: &Request,
+  req_context: &RequestContext,
   resp: &Response) {
+
+  let req = &req_context.req;
 
   let mut log_string = String::with_capacity(300);
 
@@ -167,12 +187,9 @@ fn log_request_and_response(
   log_string.push('"');
 
   log_string.push(' ');
-  log_string.push('"');
-  match req.headers().get::<UserAgent>() {
-    Some(user_agent_header) => log_string.push_str(&user_agent_header),
-    None => {}
-  }
-  log_string.push('"');
+  log_string.push_str(
+    &format!("{:.9}", duration_in_seconds(&req_context.start_time.elapsed())));
+  log_string.push('s');
 
   info!("{}", log_string);
 }
@@ -190,19 +207,19 @@ impl Service for ThreadedServer {
   type Future = futures::BoxFuture<Response, hyper::Error>;
 
   fn call(&self, req: Request) -> Self::Future {
-    debug!("begin call thread {:?}", thread::current().name());
+    let req_context = RequestContext::new(req);
 
     let route_configuration = Arc::clone(&self.route_configuration);
 
     let result = self.cpu_pool.spawn_fn(move || {
 
-      debug!("do_in_thread thread {:?} req {:?}", thread::current().name(), req);
+      debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
 
-      let path = req.uri().path();
+      let path = req_context.req.path();
       debug!("path = '{}'", path);
 
       let response = match route_configuration.routes.get(path) {
-        Some(request_handler) => request_handler.handle(&req),
+        Some(request_handler) => request_handler.handle(&req_context),
         None =>
           build_response_string(
             StatusCode::NotFound,
@@ -210,7 +227,7 @@ impl Service for ThreadedServer {
             ContentType::plaintext())
       };
 
-      log_request_and_response(&req, &response);
+      log_request_and_response(&req_context, &response);
 
       Ok(response)
 
@@ -328,9 +345,11 @@ impl IndexHandler {
 
 impl RequestHandler for IndexHandler {
 
-  fn handle(&self, req: &Request) -> Response {
+  fn handle(&self, req_context: &RequestContext) -> Response {
     match handle_if_modified_since(
-      &req, &self.creation_time, self.cache_max_age_seconds) {
+      &req_context.req,
+      &self.creation_time,
+      self.cache_max_age_seconds) {
       Some(response) => return response,
       None => {}
     }
@@ -433,7 +452,7 @@ impl CommandHandler {
 
 impl RequestHandler for CommandHandler {
 
-  fn handle(&self, _: &Request) -> Response {
+  fn handle(&self, _: &RequestContext) -> Response {
     let command_output = self.run_command();
 
     let pre_string = self.build_pre_string(command_output);
@@ -480,8 +499,8 @@ impl StaticFileHandler {
 
 impl RequestHandler for StaticFileHandler {
 
-  fn handle(&self, req: &Request) -> Response {
-    debug!("StaticFileHandler.handle req = {:?}", req);
+  fn handle(&self, req_context: &RequestContext) -> Response {
+    debug!("StaticFileHandler.handle req_context = {:?}", req_context);
 
     let file_metadata =
       match fs::metadata(&self.file_path) {
@@ -496,7 +515,9 @@ impl RequestHandler for StaticFileHandler {
       };
 
     match handle_if_modified_since(
-      &req, &file_modified, self.cache_max_age_seconds) {
+      &req_context.req,
+      &file_modified,
+      self.cache_max_age_seconds) {
       Some(response) => return response,
       None => {}
     }
