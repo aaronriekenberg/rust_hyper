@@ -2,7 +2,6 @@ extern crate chrono;
 extern crate hyper;
 #[macro_use] extern crate horrorshow;
 extern crate fern;
-extern crate futures;
 extern crate futures_cpupool;
 #[macro_use] extern crate log;
 extern crate mime;
