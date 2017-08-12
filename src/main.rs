@@ -18,7 +18,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
-use hyper::header::{CacheControl,CacheDirective,ContentLength,ContentType,HttpDate,IfModifiedSince,LastModified};
+use hyper::header::{CacheControl,CacheDirective,ContentLength,ContentType,IfModifiedSince,LastModified};
 use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
@@ -122,13 +122,12 @@ fn handle_if_modified_since(
 
   match req.headers().get::<IfModifiedSince>() {
     Some(if_modified_since_header) => {
-      let if_modified_since: SystemTime = if_modified_since_header.0.into();
+      let if_modified_since = SystemTime::from(if_modified_since_header.0);
       if system_time_in_seconds_u64(&data_last_modified) <=
          system_time_in_seconds_u64(&if_modified_since) {
-        let last_modified_http_date: HttpDate = (*data_last_modified).into();
         return Some(
           build_response_status(StatusCode::NotModified)
-            .with_header(LastModified(last_modified_http_date))
+            .with_header(LastModified((*data_last_modified).into()))
             .with_header(CacheControl(
                            vec![CacheDirective::Public,
                                 CacheDirective::MaxAge(cache_max_age_seconds)])));
