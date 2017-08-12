@@ -10,7 +10,7 @@ extern crate mime;
 extern crate serde_yaml;
 
 use chrono::prelude::Local;
-use chrono::TimeZone;
+use chrono::{DateTime, TimeZone};
 
 use futures::Future;
 
@@ -89,25 +89,22 @@ fn build_response_vec(
     .with_body(body)
 }
 
-fn current_time_string() -> String {
-  let now = Local::now();
-  now.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
+fn local_time_to_string(dt: DateTime<Local>) -> String {
+  dt.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
 }
 
-fn systemtime_to_string(st: &std::time::SystemTime) -> String {
-  let local_time =
-    match st.duration_since(UNIX_EPOCH) {
-      Ok(dur) => {
-        Local.timestamp(dur.as_secs() as i64, dur.subsec_nanos())
-      },
-      Err(_) => {
-        Local.timestamp(0, 0)
-      }
-    };
-  local_time.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
+fn system_time_to_local(st: &std::time::SystemTime) -> DateTime<Local> {
+  match st.duration_since(UNIX_EPOCH) {
+    Ok(dur) => {
+      Local.timestamp(dur.as_secs() as i64, dur.subsec_nanos())
+    },
+    Err(_) => {
+      Local.timestamp(0, 0)
+    }
+  }
 }
 
-fn systemtime_in_seconds_u64(st: &std::time::SystemTime) -> u64 {
+fn system_time_in_seconds_u64(st: &std::time::SystemTime) -> u64 {
   match st.duration_since(UNIX_EPOCH) {
     Ok(dur) => {
       dur.as_secs()
@@ -128,8 +125,8 @@ fn handle_if_modified_since(
   match req.headers().get::<IfModifiedSince>() {
     Some(if_modified_since_header) => {
       let if_modified_since: SystemTime = if_modified_since_header.0.into();
-      if systemtime_in_seconds_u64(&data_last_modified) <=
-         systemtime_in_seconds_u64(&if_modified_since) {
+      if system_time_in_seconds_u64(&data_last_modified) <=
+         system_time_in_seconds_u64(&if_modified_since) {
         let last_modified_http_date: HttpDate = (*data_last_modified).into();
         return Some(
           build_response_status(StatusCode::NotModified)
@@ -273,7 +270,7 @@ impl IndexHandler {
 
     let mut last_modified_string = String::new();
     last_modified_string.push_str("Last Modified: ");
-    last_modified_string.push_str(&systemtime_to_string(&now));
+    last_modified_string.push_str(&local_time_to_string(system_time_to_local(&now)));
 
     let s = html! {
       : doctype::HTML;
@@ -403,7 +400,7 @@ impl CommandHandler {
     let mut pre_string = String::with_capacity(command_output.len() + 100);
 
     pre_string.push_str("Now: ");
-    pre_string.push_str(&current_time_string());
+    pre_string.push_str(&local_time_to_string(Local::now()));
     pre_string.push_str("\n\n");
     pre_string.push_str(&self.command_line_string);
     pre_string.push_str("\n\n");
