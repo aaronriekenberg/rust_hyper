@@ -467,7 +467,7 @@ impl StaticFileHandler {
     }
   }
 
-  fn read_file(&self) -> Result<Vec<u8>, Box<Error>> {
+  fn read_file(&self) -> Result<Vec<u8>, io::Error> {
     let mut file = File::open(&self.file_path)?;
 
     let mut file_contents = Vec::new();
