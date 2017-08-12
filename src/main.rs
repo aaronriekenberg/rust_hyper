@@ -11,7 +11,7 @@ extern crate serde_yaml;
 use chrono::prelude::Local;
 use chrono::{DateTime, TimeZone};
 
-use futures_cpupool::CpuPool;
+use futures_cpupool::{CpuFuture, CpuPool};
 
 use horrorshow::helper::doctype;
 use horrorshow::Template;
@@ -189,7 +189,7 @@ impl Service for ThreadedServer {
   type Request = Request;
   type Response = Response;
   type Error = hyper::Error;
-  type Future = futures_cpupool::CpuFuture<Response, hyper::Error>;
+  type Future = CpuFuture<Response, hyper::Error>;
 
   fn call(&self, req: Request) -> Self::Future {
     let req_context = RequestContext::new(req);
