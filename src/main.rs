@@ -184,6 +184,19 @@ struct ThreadedServer {
   route_configuration: Arc<RouteConfiguration>
 }
 
+impl ThreadedServer {
+
+  pub fn new(
+    cpu_pool: CpuPool,
+    route_configuration: Arc<RouteConfiguration>) -> Self {
+    ThreadedServer {
+      cpu_pool: cpu_pool,
+      route_configuration: route_configuration
+    }
+  }
+
+}
+
 impl Service for ThreadedServer {
 
   type Request = Request;
@@ -597,12 +610,10 @@ fn main() {
     .create();
 
   let http_server = Http::new()
-    .bind(&listen_addr, move || Ok(
-      ThreadedServer { 
-        cpu_pool: cpu_pool.clone(),
-        route_configuration: Arc::clone(&route_configuration)
-      }
-    ))
+    .bind(&listen_addr, move ||
+      Ok(ThreadedServer::new(
+          cpu_pool.clone(),
+          Arc::clone(&route_configuration))))
     .expect("bind failed");
 
   info!("Listening on http://{} with cpu pool size {}",
