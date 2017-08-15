@@ -179,6 +179,7 @@ fn log_request_and_response(
   info!("{}", log_string);
 }
 
+#[derive(Clone)]
 struct ThreadedServer {
   cpu_pool: CpuPool,
   route_configuration: Arc<RouteConfiguration>
@@ -609,11 +610,12 @@ fn main() {
     .name_prefix("server-")
     .create();
 
+  let threaded_server = ThreadedServer::new(
+    cpu_pool,
+    route_configuration);
+
   let http_server = Http::new()
-    .bind(&listen_addr, move ||
-      Ok(ThreadedServer::new(
-          cpu_pool.clone(),
-          Arc::clone(&route_configuration))))
+    .bind(&listen_addr, move || Ok(threaded_server.clone()))
     .expect("bind failed");
 
   info!("Listening on http://{} with cpu pool size {}",
