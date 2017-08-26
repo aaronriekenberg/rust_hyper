@@ -34,8 +34,6 @@ use std::sync::Arc;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::thread;
 
-static NOT_FOUND_BODY: &'static str = "Route Not Found";
-
 #[derive(Debug)]
 struct RequestContext {
   req: Request,
@@ -55,7 +53,8 @@ trait RequestHandler : Send + Sync {
 }
 
 struct RouteConfiguration {
-  routes: HashMap<String, Box<RequestHandler>>
+  path_to_handler: HashMap<String, Box<RequestHandler>>,
+  not_found_handler: Box<RequestHandler>
 }
 
 fn build_response_status(
@@ -216,14 +215,11 @@ impl Service for ThreadedServer {
 
       let path = req_context.req.path();
 
-      let response = match route_configuration.routes.get(path) {
-        Some(request_handler) => request_handler.handle(&req_context),
-        None =>
-          build_response_string(
-            StatusCode::NotFound,
-            NOT_FOUND_BODY.to_string(),
-            ContentType::plaintext())
-      };
+      let handler = route_configuration.path_to_handler
+        .get(path)
+        .unwrap_or(&route_configuration.not_found_handler);
+
+      let response = handler.handle(&req_context);
 
       log_request_and_response(&req_context, &response);
 
@@ -259,6 +255,20 @@ struct Configuration {
   threads: usize,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
+}
+
+struct NotFoundHandler;
+
+impl RequestHandler for NotFoundHandler {
+
+  fn handle(&self, _: &RequestContext) -> Response {
+    build_response_string(
+      StatusCode::NotFound,
+      "Route not found".to_string(),
+      ContentType::plaintext())
+      .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
+  }
+
 }
 
 struct IndexHandler {
@@ -571,14 +581,14 @@ fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
 }
 
 fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> {
-  let mut routes : HashMap<String, Box<RequestHandler>> = HashMap::new();
+  let mut path_to_handler : HashMap<String, Box<RequestHandler>> = HashMap::new();
 
   let index_handler = IndexHandler::new(config).expect("error creating IndexHandler");
-  routes.insert("/".to_string(), Box::new(index_handler));
+  path_to_handler.insert("/".to_string(), Box::new(index_handler));
 
   for command_info in &config.commands {
     let handler = CommandHandler::new(command_info.clone());
-    routes.insert(command_info.http_path.clone(), Box::new(handler));
+    path_to_handler.insert(command_info.http_path.clone(), Box::new(handler));
   }
 
   for static_path_info in &config.static_paths {
@@ -587,10 +597,15 @@ fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> 
       static_path_info.fs_path.clone(),
       mime_type,
       static_path_info.cache_max_age_seconds);
-    routes.insert(static_path_info.http_path.clone(), Box::new(handler));
+    path_to_handler.insert(static_path_info.http_path.clone(), Box::new(handler));
   }
 
-  Arc::new(RouteConfiguration { routes: routes })
+  let not_found_handler = Box::new(NotFoundHandler);
+
+  Arc::new(RouteConfiguration { 
+    path_to_handler: path_to_handler,
+    not_found_handler: not_found_handler
+  })
 }
 
 fn main() {
