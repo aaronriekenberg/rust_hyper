@@ -22,6 +22,7 @@ use hyper::server::{Http, Service, Request, Response};
 
 use mime::Mime;
 
+use std::borrow::Cow;
 use std::collections::HashMap;
 use std::env;
 use std::error::Error;
@@ -143,39 +144,31 @@ fn log_request_and_response(
 
   let req = &req_context.req;
 
-  let mut log_string = String::with_capacity(100);
+  let remote_addr = match req.remote_addr() {
+    Some(remote_addr) => Cow::from(remote_addr.to_string()),
+    None => Cow::from("")
+  };
 
-  match req.remote_addr() {
-    Some(remote_addr) => {
-      log_string.push_str(&remote_addr.to_string());
-      log_string.push(' ');
-    },
-    None => {}
-  }
+  let method = req.method().to_string();
 
-  log_string.push('"');
-  log_string.push_str(&req.method().to_string());
-  log_string.push(' ');
-  log_string.push_str(&req.uri().to_string());
-  log_string.push(' ');
-  log_string.push_str(&req.version().to_string());
-  log_string.push('"');
+  let uri = req.uri().to_string();
 
-  log_string.push(' ');
-  log_string.push_str(&resp.status().as_u16().to_string());
+  let version = req.version().to_string();
 
-  log_string.push(' ');
-  match resp.headers().get::<ContentLength>() {
-    Some(content_length_header) => log_string.push_str(&content_length_header.0.to_string()),
-    None => log_string.push('0')
-  }
+  let response_status = resp.status().as_u16().to_string();
 
-  log_string.push(' ');
-  log_string.push_str(
-    &format!("{:.9}", duration_in_seconds_f64(&req_context.start_time.elapsed())));
-  log_string.push('s');
+  let content_length = match resp.headers().get::<ContentLength>() {
+    Some(content_length_header) => Cow::from(content_length_header.0.to_string()),
+    None => Cow::from("0")
+  };
 
-  info!("{}", log_string);
+  let duration = duration_in_seconds_f64(&req_context.start_time.elapsed());
+
+  info!("{} \"{} {} {}\" {} {} {:.9}s", 
+        remote_addr,
+        method, uri, version,
+        response_status, content_length,
+        duration);
 }
 
 #[derive(Clone)]
