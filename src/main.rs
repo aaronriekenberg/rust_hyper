@@ -17,6 +17,7 @@ use horrorshow::helper::doctype;
 use horrorshow::Template;
 
 use hyper::StatusCode;
+use hyper::Body;
 use hyper::header::{CacheControl,CacheDirective,ContentLength,ContentType,IfModifiedSince,LastModified};
 use hyper::server::{Http, Service, Request, Response};
 
@@ -66,13 +67,16 @@ fn build_response_status(
 
 fn build_response_string(
   status_code: StatusCode,
-  body: String,
+  body: Cow<'static, str>,
   content_type: ContentType) -> Response
 {
   build_response_status(status_code)
     .with_header(content_type)
     .with_header(ContentLength(body.len() as u64))
-    .with_body(body)
+    .with_body(match body {
+      Cow::Borrowed(b) => Body::from(b),
+      Cow::Owned(o) => Body::from(o)
+    })
 }
 
 fn build_response_vec(
@@ -257,7 +261,7 @@ impl RequestHandler for NotFoundHandler {
   fn handle(&self, _: &RequestContext) -> Response {
     build_response_string(
       StatusCode::NotFound,
-      "Route not found".to_string(),
+      Cow::from("Route not found"),
       ContentType::plaintext())
       .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
   }
@@ -353,7 +357,7 @@ impl RequestHandler for IndexHandler {
 
     build_response_string(
       StatusCode::Ok,
-      self.index_string.clone(),
+      Cow::from(self.index_string.clone()),
       ContentType::html())
       .with_header(LastModified(self.creation_time.into()))
       .with_header(CacheControl(
@@ -458,7 +462,7 @@ impl RequestHandler for CommandHandler {
 
     build_response_string(
       StatusCode::Ok,
-      html_string,
+      Cow::from(html_string),
       ContentType::html())
       .with_header(CacheControl(
          vec![CacheDirective::MaxAge(0)]))
