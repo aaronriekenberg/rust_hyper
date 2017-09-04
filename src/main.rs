@@ -16,10 +16,10 @@ use futures_cpupool::{CpuFuture, CpuPool};
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
-use hyper::StatusCode;
 use hyper::Body;
-use hyper::header::{CacheControl,CacheDirective,ContentLength,ContentType,IfModifiedSince,LastModified};
+use hyper::header;
 use hyper::server::{Http, Service, Request, Response};
+use hyper::StatusCode;
 
 use mime::Mime;
 
@@ -68,11 +68,11 @@ fn build_response_status(
 fn build_response_string(
   status_code: StatusCode,
   body: Cow<'static, str>,
-  content_type: ContentType) -> Response
+  content_type: header::ContentType) -> Response
 {
   build_response_status(status_code)
     .with_header(content_type)
-    .with_header(ContentLength(body.len() as u64))
+    .with_header(header::ContentLength(body.len() as u64))
     .with_body(match body {
       Cow::Borrowed(b) => Body::from(b),
       Cow::Owned(o) => Body::from(o)
@@ -82,11 +82,11 @@ fn build_response_string(
 fn build_response_vec(
   status_code: StatusCode,
   body: Vec<u8>,
-  content_type: ContentType) -> Response
+  content_type: header::ContentType) -> Response
 {
   build_response_status(status_code)
     .with_header(content_type)
-    .with_header(ContentLength(body.len() as u64))
+    .with_header(header::ContentLength(body.len() as u64))
     .with_body(body)
 }
 
@@ -123,17 +123,17 @@ fn handle_if_modified_since(
   data_last_modified: &SystemTime,
   cache_max_age_seconds: u32) -> Option<Response> {
 
-  match req.headers().get::<IfModifiedSince>() {
+  match req.headers().get::<header::IfModifiedSince>() {
     Some(if_modified_since_header) => {
       let if_modified_since = SystemTime::from(if_modified_since_header.0);
       if system_time_in_seconds_u64(&data_last_modified) <=
          system_time_in_seconds_u64(&if_modified_since) {
         return Some(
           build_response_status(StatusCode::NotModified)
-            .with_header(LastModified((*data_last_modified).into()))
-            .with_header(CacheControl(
-                           vec![CacheDirective::Public,
-                                CacheDirective::MaxAge(cache_max_age_seconds)])));
+            .with_header(header::LastModified((*data_last_modified).into()))
+            .with_header(header::CacheControl(
+                           vec![header::CacheDirective::Public,
+                                header::CacheDirective::MaxAge(cache_max_age_seconds)])));
       }
     },
     None => {}
@@ -161,7 +161,7 @@ fn log_request_and_response(
 
   let response_status = resp.status().as_u16().to_string();
 
-  let content_length = match resp.headers().get::<ContentLength>() {
+  let content_length = match resp.headers().get::<header::ContentLength>() {
     Some(content_length_header) => Cow::from(content_length_header.0.to_string()),
     None => Cow::from("0")
   };
@@ -262,8 +262,9 @@ impl RequestHandler for NotFoundHandler {
     build_response_string(
       StatusCode::NotFound,
       Cow::from("Route not found"),
-      ContentType::plaintext())
-      .with_header(CacheControl(vec![CacheDirective::MaxAge(0)]))
+      header::ContentType::plaintext())
+      .with_header(header::CacheControl(
+                     vec![header::CacheDirective::MaxAge(0)]))
   }
 
 }
@@ -358,11 +359,11 @@ impl RequestHandler for IndexHandler {
     build_response_string(
       StatusCode::Ok,
       Cow::from(self.index_string.clone()),
-      ContentType::html())
-      .with_header(LastModified(self.creation_time.into()))
-      .with_header(CacheControl(
-         vec![CacheDirective::Public,
-              CacheDirective::MaxAge(self.cache_max_age_seconds)]))
+      header::ContentType::html())
+      .with_header(header::LastModified(self.creation_time.into()))
+      .with_header(header::CacheControl(
+         vec![header::CacheDirective::Public,
+              header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
   }
 
 }
@@ -463,9 +464,9 @@ impl RequestHandler for CommandHandler {
     build_response_string(
       StatusCode::Ok,
       Cow::from(html_string),
-      ContentType::html())
-      .with_header(CacheControl(
-         vec![CacheDirective::MaxAge(0)]))
+      header::ContentType::html())
+      .with_header(header::CacheControl(
+         vec![header::CacheDirective::MaxAge(0)]))
   }
 
 }
@@ -528,11 +529,11 @@ impl RequestHandler for StaticFileHandler {
         build_response_vec(
           StatusCode::Ok,
           file_contents,
-          ContentType(self.mime_type.clone()))
-          .with_header(LastModified(file_modified.into()))
-          .with_header(CacheControl(
-             vec![CacheDirective::Public,
-                  CacheDirective::MaxAge(self.cache_max_age_seconds)]))
+          header::ContentType(self.mime_type.clone()))
+          .with_header(header::LastModified(file_modified.into()))
+          .with_header(header::CacheControl(
+             vec![header::CacheDirective::Public,
+                  header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
       },
       Err(_) => {
         build_response_status(StatusCode::NotFound)
