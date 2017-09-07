@@ -18,6 +18,11 @@ commands:
   command: /sbin/iwconfig
   args: []
 
+- http_path: /ncal
+  description: ncal
+  command: ncal
+  args: [-h, -y]
+
 - http_path: /netstat
   description: netstat
   command: netstat
