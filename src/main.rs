@@ -118,25 +118,23 @@ fn duration_in_seconds_f64(duration: &std::time::Duration) -> f64 {
   (duration.as_secs() as f64) + ((duration.subsec_nanos() as f64) / 1e9)
 }
 
-fn handle_if_modified_since(
+fn handle_not_modified(
   req: &Request,
   data_last_modified: &SystemTime,
   cache_max_age_seconds: u32) -> Option<Response> {
 
-  match req.headers().get::<header::IfModifiedSince>() {
-    Some(if_modified_since_header) => {
-      let if_modified_since = SystemTime::from(if_modified_since_header.0);
-      if system_time_in_seconds_u64(&data_last_modified) <=
-         system_time_in_seconds_u64(&if_modified_since) {
-        return Some(
-          build_response_status(StatusCode::NotModified)
-            .with_header(header::LastModified((*data_last_modified).into()))
-            .with_header(header::CacheControl(
-                           vec![header::CacheDirective::Public,
-                                header::CacheDirective::MaxAge(cache_max_age_seconds)])));
-      }
-    },
-    None => {}
+  if let Some(if_modified_since_header) =
+     req.headers().get::<header::IfModifiedSince>() {
+    let if_modified_since = SystemTime::from(if_modified_since_header.0);
+    if system_time_in_seconds_u64(&data_last_modified) <=
+       system_time_in_seconds_u64(&if_modified_since) {
+      return Some(
+        build_response_status(StatusCode::NotModified)
+          .with_header(header::LastModified((*data_last_modified).into()))
+          .with_header(header::CacheControl(
+                         vec![header::CacheDirective::Public,
+                              header::CacheDirective::MaxAge(cache_max_age_seconds)])));
+    }
   }
 
   None
@@ -348,12 +346,11 @@ impl IndexHandler {
 impl RequestHandler for IndexHandler {
 
   fn handle(&self, req_context: &RequestContext) -> Response {
-    match handle_if_modified_since(
+    if let Some(response) = handle_not_modified(
       &req_context.req,
       &self.creation_time,
       self.cache_max_age_seconds) {
-      Some(response) => return response,
-      None => {}
+      return response;
     }
 
     build_response_string(
@@ -516,12 +513,11 @@ impl RequestHandler for StaticFileHandler {
         Err(_) => return build_response_status(StatusCode::NotFound)
       };
 
-    match handle_if_modified_since(
+    if let Some(response) = handle_not_modified(
       &req_context.req,
       &file_modified,
       self.cache_max_age_seconds) {
-      Some(response) => return response,
-      None => {}
+      return response;
     }
 
     match self.read_file() {
