@@ -569,10 +569,10 @@ fn file_sha256(path: &str) -> Result<String, io::Error> {
 
   let mut hasher = Sha256::new();
 
-  let mut buffer = [0; 1024 * 1024];
+  let mut buffer = Box::new([0; 1024 * 1024]);
 
   loop {
-    let bytes_read = file.read(&mut buffer)?;
+    let bytes_read = file.read(&mut (*buffer))?;
     match bytes_read {
       0 => break,
       _ => hasher.input(&buffer[0..bytes_read])
