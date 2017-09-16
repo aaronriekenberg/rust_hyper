@@ -9,4 +9,4 @@ if [ -f output ]; then
   mv output output.1
 fi
 
-nohup ./rust_hyper $CONFIG_FILE >> output 2>&1 &
+nohup ./rust_hyper $CONFIG_FILE > output 2>&1 &
