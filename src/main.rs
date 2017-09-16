@@ -571,14 +571,11 @@ fn file_sha256(path: &str) -> Result<String, io::Error> {
 
   let mut buffer = [0; 1024 * 1024];
 
-  let mut done = false;
-
-  while !done {
+  loop {
     let bytes_read = file.read(&mut buffer)?;
-    if bytes_read == 0 {
-      done = true;
-    } else {
-      hasher.input(&buffer[0..bytes_read]);
+    match bytes_read {
+      0 => break,
+      _ => hasher.input(&buffer[0..bytes_read])
     }
   }
 
