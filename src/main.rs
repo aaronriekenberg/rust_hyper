@@ -1,4 +1,5 @@
 extern crate chrono;
+extern crate crypto;
 extern crate hyper;
 #[macro_use] extern crate horrorshow;
 extern crate fern;
@@ -10,6 +11,9 @@ extern crate serde_yaml;
 
 use chrono::prelude::Local;
 use chrono::{DateTime, TimeZone};
+
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
 
 use futures_cpupool::{CpuFuture, CpuPool};
 
@@ -560,6 +564,27 @@ fn initialize_logging() -> Result<(), fern::InitError>{
   Ok(())
 }
 
+fn file_sha256(path: &str) -> Result<String, io::Error> {
+  let mut file = File::open(path)?;
+
+  let mut hasher = Sha256::new();
+
+  let mut buffer = [0; 1024 * 1024];
+
+  let mut done = false;
+
+  while !done {
+    let bytes_read = file.read(&mut buffer)?;
+    if bytes_read == 0 {
+      done = true;
+    } else {
+      hasher.input(&buffer[0..bytes_read]);
+    }
+  }
+
+  Ok(hasher.result_str())
+}
+
 fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
   info!("reading {}", config_file);
 
@@ -604,6 +629,12 @@ fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> 
 
 fn main() {
   initialize_logging().expect("failed to initialize logging");
+
+  let executable_path = env::args().nth(0).expect("missing argument 0");
+  info!("executable_path = {}", executable_path);
+
+  let executable_checksum = file_sha256(&executable_path).expect("error getting executable sha256");
+  info!("sha256 = {}", executable_checksum);
 
   let config_file = env::args().nth(1).expect("config file required as command line argument");
 
