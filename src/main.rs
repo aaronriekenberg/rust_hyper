@@ -564,7 +564,7 @@ fn initialize_logging() -> Result<(), fern::InitError>{
   Ok(())
 }
 
-fn file_sha256(path: &str) -> Result<String, io::Error> {
+fn file_sha256(path: String) -> Result<String, io::Error> {
   let mut file = File::open(path)?;
 
   let mut hasher = Sha256::new();
@@ -582,7 +582,7 @@ fn file_sha256(path: &str) -> Result<String, io::Error> {
   Ok(hasher.result_str())
 }
 
-fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
+fn read_config(config_file: String) -> Result<Configuration, Box<Error>> {
   info!("reading {}", config_file);
 
   let mut file = File::open(config_file)?;
@@ -630,12 +630,12 @@ fn main() {
   let executable_path = env::args().nth(0).expect("missing argument 0");
   info!("executable_path = {}", executable_path);
 
-  let executable_checksum = file_sha256(&executable_path).expect("error getting executable sha256");
+  let executable_checksum = file_sha256(executable_path).expect("error getting executable sha256");
   info!("sha256 = {}", executable_checksum);
 
   let config_file = env::args().nth(1).expect("config file required as command line argument");
 
-  let config = read_config(&config_file).expect("error reading configuration file");
+  let config = read_config(config_file).expect("error reading configuration file");
   info!("config = {:?}", config);
 
   let listen_addr = config.listen_address.parse().expect("invalid listen_address");
