@@ -9,5 +9,4 @@ if [ -f output ]; then
   mv output output.1
 fi
 
-md5sum ./rust_hyper > output
 nohup ./rust_hyper $CONFIG_FILE >> output 2>&1 &
