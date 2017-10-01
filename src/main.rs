@@ -20,6 +20,7 @@ use futures_cpupool::{CpuFuture, CpuPool};
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
+use hyper::Body;
 use hyper::header;
 use hyper::server::{Http, Service, Request, Response};
 use hyper::StatusCode;
@@ -76,7 +77,10 @@ fn build_response_string(
   build_response_status(status_code)
     .with_header(content_type)
     .with_header(header::ContentLength(body.len() as u64))
-    .with_body(body)
+    .with_body(match body {
+      Cow::Borrowed(b) => Body::from(b),
+      Cow::Owned(o) => Body::from(o)
+    })
 }
 
 fn build_response_vec(
