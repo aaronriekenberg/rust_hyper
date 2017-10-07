@@ -542,7 +542,6 @@ impl RequestHandler for StaticFileHandler {
 fn initialize_logging() -> Result<(), fern::InitError>{
   fern::Dispatch::new()
     .level(log::LogLevelFilter::Info)
-    .level_for("hyper::http::request", log::LogLevelFilter::Warn)
     .format(|out, message, record| {
       out.finish(
         format_args!("{} [{}] {} {} - {}",
