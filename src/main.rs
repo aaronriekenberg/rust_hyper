@@ -632,7 +632,7 @@ fn main() {
   let config_file = env::args().nth(1).expect("config file required as command line argument");
 
   let config = read_config(config_file).expect("error reading configuration file");
-  info!("config = {:?}", config);
+  info!("config = {:#?}", config);
 
   let listen_addr = config.listen_address.parse().expect("invalid listen_address");
 
