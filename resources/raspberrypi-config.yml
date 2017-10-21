@@ -48,6 +48,16 @@ commands:
   command: top
   args: [-b, -n1]
 
+- http_path: /unbound_infra
+  description: unbound infra
+  command: sudo
+  args: [unbound-control, dump_infra]
+
+- http_path: /unbound_stats
+  description: unbound stats
+  command: sudo
+  args: [unbound-control, stats_noreset]
+
 - http_path: /uptime
   description: uptime
   command: uptime
