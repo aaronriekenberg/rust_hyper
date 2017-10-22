@@ -18,6 +18,11 @@ commands:
   command: netstat
   args: [-a, -n]
 
+- http_path: /sleep
+  description: sleep
+  command: sleep
+  args: [5]
+
 static_paths:
 
 - http_path: /style.css

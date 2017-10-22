@@ -36,6 +36,7 @@ use std::io;
 use std::io::Read;
 use std::process::Command;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use std::thread;
 
@@ -176,17 +177,39 @@ fn log_request_and_response(
 #[derive(Clone)]
 struct ThreadedServer {
   cpu_pool: CpuPool,
+  pool_threads: usize,
+  pending_cpu_pool_tasks: Arc<AtomicUsize>,
   route_configuration: Arc<RouteConfiguration>
 }
 
 impl ThreadedServer {
 
   pub fn new(
-    cpu_pool: CpuPool,
+    pool_threads: usize,
     route_configuration: Arc<RouteConfiguration>) -> Self {
+
+    let cpu_pool = futures_cpupool::Builder::new()
+      .pool_size(pool_threads)
+      .name_prefix("server-")
+      .create();
+
     ThreadedServer {
       cpu_pool: cpu_pool,
+      pool_threads: pool_threads,
+      pending_cpu_pool_tasks: Arc::new(AtomicUsize::new(0)),
       route_configuration: route_configuration
+    }
+  }
+
+  fn wait_for_pending_tasks(&self) {
+    loop {
+      let pending_tasks = self.pending_cpu_pool_tasks.load(Ordering::SeqCst);
+      if pending_tasks < self.pool_threads * 2 {
+        break;
+      } else {
+        warn!("pending tasks is big: {}", pending_tasks);
+        thread::sleep(std::time::Duration::from_millis(100));
+      }
     }
   }
 
@@ -202,7 +225,13 @@ impl Service for ThreadedServer {
   fn call(&self, req: Request) -> Self::Future {
     let req_context = RequestContext::new(req);
 
+    self.wait_for_pending_tasks();
+
     let route_configuration = Arc::clone(&self.route_configuration);
+
+    let pending_cpu_pool_tasks = Arc::clone(&self.pending_cpu_pool_tasks);
+
+    pending_cpu_pool_tasks.fetch_add(1, Ordering::SeqCst);
 
     self.cpu_pool.spawn_fn(move || {
 
@@ -217,6 +246,8 @@ impl Service for ThreadedServer {
       let response = handler.handle(&req_context);
 
       log_request_and_response(&req_context, &response);
+
+      pending_cpu_pool_tasks.fetch_sub(1, Ordering::SeqCst);
 
       Ok(response)
 
@@ -623,13 +654,8 @@ fn create_threaded_server(config: &Configuration) -> ThreadedServer {
 
   let route_configuration = build_route_configuration(&config);
 
-  let cpu_pool = futures_cpupool::Builder::new()
-    .pool_size(config.threads)
-    .name_prefix("server-")
-    .create();
-
   ThreadedServer::new(
-    cpu_pool,
+    config.threads,
     route_configuration)
 }
 
