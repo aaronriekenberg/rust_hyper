@@ -619,6 +619,20 @@ fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> 
   })
 }
 
+fn create_threaded_server(config: &Configuration) -> ThreadedServer {
+
+  let route_configuration = build_route_configuration(&config);
+
+  let cpu_pool = futures_cpupool::Builder::new()
+    .pool_size(config.threads)
+    .name_prefix("server-")
+    .create();
+
+  ThreadedServer::new(
+    cpu_pool,
+    route_configuration)
+}
+
 fn main() {
   initialize_logging().expect("failed to initialize logging");
 
@@ -635,16 +649,7 @@ fn main() {
 
   let listen_addr = config.listen_address.parse().expect("invalid listen_address");
 
-  let route_configuration = build_route_configuration(&config);
-
-  let cpu_pool = futures_cpupool::Builder::new()
-    .pool_size(config.threads)
-    .name_prefix("server-")
-    .create();
-
-  let threaded_server = ThreadedServer::new(
-    cpu_pool,
-    route_configuration);
+  let threaded_server = create_threaded_server(&config);
 
   let http_server = Http::new()
     .bind(&listen_addr, move || Ok(threaded_server.clone()))
