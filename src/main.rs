@@ -174,37 +174,44 @@ fn log_request_and_response(
         duration);
 }
 
-#[derive(Clone)]
-struct ThreadedServer {
+struct InnerThreadedServer {
   cpu_pool: CpuPool,
   pool_threads: usize,
-  pending_cpu_pool_tasks: Arc<AtomicUsize>,
-  route_configuration: Arc<RouteConfiguration>
+  pending_cpu_pool_tasks: AtomicUsize,
+  route_configuration: RouteConfiguration
+}
+
+#[derive(Clone)]
+struct ThreadedServer {
+  inner: Arc<InnerThreadedServer>
 }
 
 impl ThreadedServer {
 
   pub fn new(
     pool_threads: usize,
-    route_configuration: Arc<RouteConfiguration>) -> Self {
+    route_configuration: RouteConfiguration) -> Self {
 
     let cpu_pool = futures_cpupool::Builder::new()
       .pool_size(pool_threads)
       .name_prefix("server-")
       .create();
 
-    ThreadedServer {
+    let inner = Arc::new(InnerThreadedServer {
       cpu_pool: cpu_pool,
       pool_threads: pool_threads,
-      pending_cpu_pool_tasks: Arc::new(AtomicUsize::new(0)),
+      pending_cpu_pool_tasks: AtomicUsize::new(0),
       route_configuration: route_configuration
-    }
+    });
+
+    ThreadedServer { inner: inner }
   }
 
   fn wait_for_pending_tasks(&self) {
+    let inner = &self.inner;
     loop {
-      let pending_tasks = self.pending_cpu_pool_tasks.load(Ordering::SeqCst);
-      if pending_tasks < self.pool_threads * 2 {
+      let pending_tasks = inner.pending_cpu_pool_tasks.load(Ordering::SeqCst);
+      if pending_tasks < inner.pool_threads * 2 {
         break;
       } else {
         warn!("pending tasks is big: {}", pending_tasks);
@@ -227,27 +234,25 @@ impl Service for ThreadedServer {
 
     self.wait_for_pending_tasks();
 
-    let route_configuration = Arc::clone(&self.route_configuration);
+    let inner = Arc::clone(&self.inner);
 
-    let pending_cpu_pool_tasks = Arc::clone(&self.pending_cpu_pool_tasks);
+    self.inner.pending_cpu_pool_tasks.fetch_add(1, Ordering::SeqCst);
 
-    pending_cpu_pool_tasks.fetch_add(1, Ordering::SeqCst);
-
-    self.cpu_pool.spawn_fn(move || {
+    self.inner.cpu_pool.spawn_fn(move || {
 
       debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
 
       let path = req_context.req.path();
 
-      let handler = route_configuration.path_to_handler
+      let handler = inner.route_configuration.path_to_handler
         .get(path)
-        .unwrap_or(&route_configuration.not_found_handler);
+        .unwrap_or(&inner.route_configuration.not_found_handler);
 
       let response = handler.handle(&req_context);
 
       log_request_and_response(&req_context, &response);
 
-      pending_cpu_pool_tasks.fetch_sub(1, Ordering::SeqCst);
+      inner.pending_cpu_pool_tasks.fetch_sub(1, Ordering::SeqCst);
 
       Ok(response)
 
@@ -622,7 +627,7 @@ fn read_config(config_file: String) -> Result<Configuration, Box<Error>> {
   Ok(configuration)
 }
 
-fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> {
+fn build_route_configuration(config: &Configuration) -> RouteConfiguration {
   let mut path_to_handler : HashMap<String, Box<RequestHandler>> = HashMap::new();
 
   let index_handler = IndexHandler::new(config).expect("error creating IndexHandler");
@@ -644,10 +649,10 @@ fn build_route_configuration(config: &Configuration) -> Arc<RouteConfiguration> 
 
   let not_found_handler = Box::new(NotFoundHandler);
 
-  Arc::new(RouteConfiguration { 
+  RouteConfiguration { 
     path_to_handler: path_to_handler,
     not_found_handler: not_found_handler
-  })
+  }
 }
 
 fn create_threaded_server(config: &Configuration) -> ThreadedServer {
