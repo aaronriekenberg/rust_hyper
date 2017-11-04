@@ -1,10 +1,10 @@
 listen_address: 0.0.0.0:8081
 
-main_page_title: Aaron's Raspberry Pi
-
-main_page_cache_max_age_seconds: 3600
-
 threads: 8
+
+main_page_info:
+  title: Aaron's Raspberry Pi
+  cache_max_age_seconds: 3600
 
 commands:
 

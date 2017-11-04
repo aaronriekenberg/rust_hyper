@@ -211,7 +211,7 @@ impl ThreadedServer {
     let inner = &self.inner;
     loop {
       let pending_tasks = inner.pending_cpu_pool_tasks.load(Ordering::SeqCst);
-      if pending_tasks < inner.pool_threads * 2 {
+      if pending_tasks < inner.pool_threads * 20 {
         break;
       } else {
         warn!("pending tasks is big: {}", pending_tasks);
@@ -279,11 +279,16 @@ struct StaticPathInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+struct MainPageInfo {
+  title: String,
+  cache_max_age_seconds: u32
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 struct Configuration {
   listen_address: String,
-  main_page_title: String,
-  main_page_cache_max_age_seconds: u32,
   threads: usize,
+  main_page_info: MainPageInfo,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
 }
@@ -326,13 +331,13 @@ impl IndexHandler {
       : doctype::HTML;
       html {
         head {
-          title: &config.main_page_title;
+          title: &config.main_page_info.title;
           meta(name = "viewport", content = "width=device, initial-scale=1");
           link(rel = "stylesheet", type = "text/css", href = "style.css");
         }
         body {
           h2 {
-            : &config.main_page_title;
+            : &config.main_page_info.title;
           }
           @ if config.commands.len() > 0 {
             h3 {
@@ -373,7 +378,7 @@ impl IndexHandler {
     Ok(IndexHandler { 
       index_string: s,
       creation_time: now,
-      cache_max_age_seconds: config.main_page_cache_max_age_seconds
+      cache_max_age_seconds: config.main_page_info.cache_max_age_seconds
     })
   }
 
