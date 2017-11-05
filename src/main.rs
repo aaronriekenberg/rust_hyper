@@ -176,8 +176,8 @@ fn log_request_and_response(
 
 struct InnerThreadedServer {
   cpu_pool: CpuPool,
-  pool_threads: usize,
-  pending_cpu_pool_tasks: AtomicUsize,
+  max_pending_tasks: usize,
+  pending_tasks: AtomicUsize,
   route_configuration: RouteConfiguration
 }
 
@@ -190,6 +190,7 @@ impl ThreadedServer {
 
   pub fn new(
     pool_threads: usize,
+    max_pending_tasks: usize,
     route_configuration: RouteConfiguration) -> Self {
 
     let cpu_pool = futures_cpupool::Builder::new()
@@ -199,8 +200,8 @@ impl ThreadedServer {
 
     let inner = Arc::new(InnerThreadedServer {
       cpu_pool: cpu_pool,
-      pool_threads: pool_threads,
-      pending_cpu_pool_tasks: AtomicUsize::new(0),
+      max_pending_tasks: max_pending_tasks,
+      pending_tasks: AtomicUsize::new(0),
       route_configuration: route_configuration
     });
 
@@ -210,8 +211,8 @@ impl ThreadedServer {
   fn wait_for_pending_tasks(&self) {
     let inner = &self.inner;
     loop {
-      let pending_tasks = inner.pending_cpu_pool_tasks.load(Ordering::SeqCst);
-      if pending_tasks < inner.pool_threads * 20 {
+      let pending_tasks = inner.pending_tasks.load(Ordering::SeqCst);
+      if pending_tasks < inner.max_pending_tasks {
         break;
       } else {
         warn!("pending tasks is big: {}", pending_tasks);
@@ -236,7 +237,7 @@ impl Service for ThreadedServer {
 
     let inner = Arc::clone(&self.inner);
 
-    self.inner.pending_cpu_pool_tasks.fetch_add(1, Ordering::SeqCst);
+    self.inner.pending_tasks.fetch_add(1, Ordering::SeqCst);
 
     self.inner.cpu_pool.spawn_fn(move || {
 
@@ -252,7 +253,7 @@ impl Service for ThreadedServer {
 
       log_request_and_response(&req_context, &response);
 
-      inner.pending_cpu_pool_tasks.fetch_sub(1, Ordering::SeqCst);
+      inner.pending_tasks.fetch_sub(1, Ordering::SeqCst);
 
       Ok(response)
 
@@ -288,6 +289,7 @@ struct MainPageInfo {
 struct Configuration {
   listen_address: String,
   threads: usize,
+  max_pending_tasks: usize,
   main_page_info: MainPageInfo,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
@@ -666,6 +668,7 @@ fn create_threaded_server(config: &Configuration) -> ThreadedServer {
 
   ThreadedServer::new(
     config.threads,
+    config.max_pending_tasks,
     route_configuration)
 }
 
