@@ -10,6 +10,11 @@ main_page_info:
 
 commands:
 
+- http_path: /dmesg
+  description: dmesg
+  command: dmesg
+  args: []
+
 - http_path: /ifconfig
   description: ifconfig
   command: /sbin/ifconfig
@@ -18,6 +23,11 @@ commands:
 - http_path: /iwconfig
   description: iwconfig
   command: /sbin/iwconfig
+  args: []
+
+- http_path: /lscpu
+  description: lscpu
+  command: lscpu
   args: []
 
 - http_path: /ncal
