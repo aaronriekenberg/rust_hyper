@@ -41,16 +41,19 @@ pub trait RequestHandler : Send + Sync {
   fn handle(&self, req_context: &RequestContext) -> Response;
 }
 
+pub type RouteConfigurationHandler = Box<RequestHandler>;
+pub type RouteConfigurationHandlerMap = HashMap<String, RouteConfigurationHandler>;
+
 pub struct RouteConfiguration {
-  path_to_handler: HashMap<String, Box<RequestHandler>>,
-  not_found_handler: Box<RequestHandler>
+  path_to_handler: RouteConfigurationHandlerMap,
+  not_found_handler: RouteConfigurationHandler
 }
 
 impl RouteConfiguration {
 
   pub fn new(
-    path_to_handler: HashMap<String, Box<RequestHandler>>,
-    not_found_handler: Box<RequestHandler>) -> Self {
+    path_to_handler: RouteConfigurationHandlerMap,
+    not_found_handler: RouteConfigurationHandler) -> Self {
     RouteConfiguration {
       path_to_handler: path_to_handler,
       not_found_handler: not_found_handler

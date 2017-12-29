@@ -27,7 +27,6 @@ use hyper::StatusCode;
 use mime::Mime;
 
 use std::borrow::Cow;
-use std::collections::HashMap;
 use std::env;
 use std::error::Error;
 use std::fs;
@@ -411,7 +410,7 @@ fn read_config(config_file: String) -> Result<Configuration, Box<Error>> {
 }
 
 fn build_route_configuration(config: &Configuration) -> server::RouteConfiguration {
-  let mut path_to_handler : HashMap<String, Box<server::RequestHandler>> = HashMap::new();
+  let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
 
   let index_handler = IndexHandler::new(config).expect("error creating IndexHandler");
   path_to_handler.insert("/".to_string(), Box::new(index_handler));
