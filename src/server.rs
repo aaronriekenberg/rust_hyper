@@ -60,11 +60,11 @@ impl RouteConfiguration {
     }
   }
 
-  pub fn path_to_handler(&self) -> &HashMap<String, Box<RequestHandler>> {
+  pub fn path_to_handler(&self) -> &RouteConfigurationHandlerMap {
     &self.path_to_handler
   }
 
-  pub fn not_found_handler(&self) -> &Box<RequestHandler> {
+  pub fn not_found_handler(&self) -> &RouteConfigurationHandler {
     &self.not_found_handler
   }
 
