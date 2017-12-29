@@ -584,7 +584,7 @@ impl RequestHandler for StaticFileHandler {
 
 fn initialize_logging() -> Result<(), fern::InitError>{
   fern::Dispatch::new()
-    .level(log::LogLevelFilter::Info)
+    .level(log::LevelFilter::Info)
     .format(|out, message, record| {
       out.finish(
         format_args!("{} [{}] {} {} - {}",
