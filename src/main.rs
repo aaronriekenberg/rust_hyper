@@ -36,6 +36,14 @@ fn initialize_logging() -> Result<(), fern::InitError>{
   Ok(())
 }
 
+fn log_executable_info() {
+  let executable_path = std::env::args().nth(0).expect("missing argument 0");
+  info!("executable_path = {}", executable_path);
+
+  let executable_checksum = utils::file_sha256(executable_path).expect("error getting executable sha256");
+  info!("sha256 = {}", executable_checksum);
+}
+
 fn build_route_configuration(config: &config::Configuration) -> server::RouteConfiguration {
   let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
 
@@ -79,11 +87,7 @@ fn create_threaded_server(config: &config::Configuration) -> server::ThreadedSer
 fn main() {
   initialize_logging().expect("failed to initialize logging");
 
-  let executable_path = std::env::args().nth(0).expect("missing argument 0");
-  info!("executable_path = {}", executable_path);
-
-  let executable_checksum = utils::file_sha256(executable_path).expect("error getting executable sha256");
-  info!("sha256 = {}", executable_checksum);
+  log_executable_info();
 
   let config_file = std::env::args().nth(1).expect("config file required as command line argument");
 
