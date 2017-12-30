@@ -1,8 +1,3 @@
-mod config;
-mod handlers;
-mod server;
-mod utils;
-
 extern crate chrono;
 extern crate crypto;
 extern crate hyper;
@@ -13,6 +8,11 @@ extern crate futures_cpupool;
 extern crate mime;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
+
+mod config;
+mod handlers;
+mod server;
+mod utils;
 
 use chrono::prelude::Local;
 
@@ -40,19 +40,18 @@ fn build_route_configuration(config: &config::Configuration) -> server::RouteCon
   let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
 
   let index_handler =
-    handlers::index::IndexHandler::new(config)
-    .expect("error creating IndexHandler");
+    handlers::index::IndexHandler::new(config).expect("error creating IndexHandler");
   path_to_handler.insert("/".to_string(), Box::new(index_handler));
 
   for command_info in config.commands() {
-    let handler = 
+    let handler =
       handlers::command::CommandHandler::new(command_info.clone());
     path_to_handler.insert(command_info.http_path().clone(), Box::new(handler));
   }
 
   for static_path_info in config.static_paths() {
     let mime_type = static_path_info.content_type().parse().expect("invalid mime type");
-    let handler = 
+    let handler =
       handlers::static_file::StaticFileHandler::new(
         static_path_info.fs_path().clone(),
         mime_type,
