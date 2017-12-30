@@ -124,7 +124,7 @@ pub fn log_request_and_response(
   req_context: &RequestContext,
   resp: &Response) {
 
-  let req = &req_context.req();
+  let req = req_context.req();
 
   let remote_addr = match req.remote_addr() {
     Some(remote_addr) => Cow::from(remote_addr.to_string()),
