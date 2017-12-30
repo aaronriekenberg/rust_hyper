@@ -1,5 +1,3 @@
-use std::fs::File;
-
 use serde_yaml;
 
 use std;
@@ -125,7 +123,7 @@ impl Configuration {
 pub fn read_config(config_file: String) -> Result<Configuration, Box<std::error::Error>> {
   info!("reading {}", config_file);
 
-  let mut file = File::open(config_file)?;
+  let mut file = std::fs::File::open(config_file)?;
 
   let mut file_contents = String::new();
 
