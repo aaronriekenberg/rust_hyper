@@ -23,7 +23,7 @@ pub struct RequestContext {
 
 impl RequestContext {
 
-  pub fn new(req: Request) -> Self {
+  fn new(req: Request) -> Self {
     RequestContext { req: req, start_time: Instant::now() }
   }
 
