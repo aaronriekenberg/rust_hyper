@@ -237,7 +237,7 @@ impl hyper::server::Service for ThreadedServer {
 
     let req_context = RequestContext::new(req);
 
-    if self.inner.route_configuration.path_to_threadpool_handler
+    if self.inner.route_configuration.path_to_threadpool_handler()
          .contains_key(req_context.req().path()) {
 
       self.wait_for_pending_tasks();
