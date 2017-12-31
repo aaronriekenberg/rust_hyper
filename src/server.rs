@@ -173,7 +173,7 @@ struct InnerThreadedServer {
 impl InnerThreadedServer {
 
   fn decrement_pending_tasks(&self) {
-    self.pending_tasks.fetch_add(1, Ordering::SeqCst);
+    self.pending_tasks.fetch_sub(1, Ordering::SeqCst);
   }
 
 }
