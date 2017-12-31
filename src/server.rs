@@ -1,5 +1,8 @@
+use futures;
+use futures::Future;
+
 use futures_cpupool;
-use futures_cpupool::{CpuFuture, CpuPool};
+use futures_cpupool::CpuPool;
 
 use hyper;
 use hyper::header;
@@ -46,6 +49,7 @@ pub type RouteConfigurationHandlerMap = HashMap<String, RouteConfigurationHandle
 
 pub struct RouteConfiguration {
   path_to_handler: RouteConfigurationHandlerMap,
+  path_to_threadpool_handler: RouteConfigurationHandlerMap,
   not_found_handler: RouteConfigurationHandler
 }
 
@@ -53,15 +57,21 @@ impl RouteConfiguration {
 
   pub fn new(
     path_to_handler: RouteConfigurationHandlerMap,
+    path_to_threadpool_handler: RouteConfigurationHandlerMap,
     not_found_handler: RouteConfigurationHandler) -> Self {
     RouteConfiguration {
       path_to_handler: path_to_handler,
+      path_to_threadpool_handler: path_to_threadpool_handler,
       not_found_handler: not_found_handler
     }
   }
 
   pub fn path_to_handler(&self) -> &RouteConfigurationHandlerMap {
     &self.path_to_handler
+  }
+
+  pub fn path_to_threadpool_handler(&self) -> &RouteConfigurationHandlerMap {
+    &self.path_to_threadpool_handler
   }
 
   pub fn not_found_handler(&self) -> &RouteConfigurationHandler {
@@ -160,6 +170,16 @@ struct InnerThreadedServer {
   route_configuration: RouteConfiguration
 }
 
+impl InnerThreadedServer {
+
+  fn decrement_pending_tasks(&self) {
+    self.pending_tasks.fetch_add(1, Ordering::SeqCst);
+  }
+
+}
+
+type ThreadedServerFuture = Box<Future<Item = hyper::Response, Error = hyper::Error>>;
+
 #[derive(Clone)]
 pub struct ThreadedServer {
   inner: Arc<InnerThreadedServer>
@@ -200,43 +220,63 @@ impl ThreadedServer {
     }
   }
 
+  fn increment_pending_tasks(&self) {
+    self.inner.pending_tasks.fetch_add(1, Ordering::SeqCst);
+  }
+
 }
 
 impl hyper::server::Service for ThreadedServer {
 
-  type Request = Request;
-  type Response = Response;
+  type Request = hyper::Request;
+  type Response = hyper::Response;
   type Error = hyper::Error;
-  type Future = CpuFuture<Response, hyper::Error>;
+  type Future = ThreadedServerFuture;
 
   fn call(&self, req: Request) -> Self::Future {
+
     let req_context = RequestContext::new(req);
 
-    self.wait_for_pending_tasks();
+    if self.inner.route_configuration.path_to_threadpool_handler
+         .contains_key(req_context.req().path()) {
 
-    let inner = Arc::clone(&self.inner);
+      self.wait_for_pending_tasks();
 
-    self.inner.pending_tasks.fetch_add(1, Ordering::SeqCst);
+      let inner = Arc::clone(&self.inner);
 
-    self.inner.cpu_pool.spawn_fn(move || {
+      self.increment_pending_tasks();
 
-      debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
+      Box::new(self.inner.cpu_pool.spawn_fn(move || {
 
-      let path = req_context.req().path();
+        debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
 
-      let handler = inner.route_configuration.path_to_handler()
-        .get(path)
-        .unwrap_or(inner.route_configuration.not_found_handler());
+        let handler = inner.route_configuration.path_to_threadpool_handler()
+          .get(req_context.req().path()).unwrap();
+
+        let response = handler.handle(&req_context);
+
+        log_request_and_response(&req_context, &response);
+
+        inner.decrement_pending_tasks();
+
+        Ok(response)
+
+      }))
+
+    } else {
+
+      let handler = self.inner.route_configuration.path_to_handler()
+        .get(req_context.req().path())
+        .unwrap_or(self.inner.route_configuration.not_found_handler());
 
       let response = handler.handle(&req_context);
 
       log_request_and_response(&req_context, &response);
 
-      inner.pending_tasks.fetch_sub(1, Ordering::SeqCst);
+      Box::new(futures::future::ok(response))
 
-      Ok(response)
+    }
 
-    })
   }
 
 }

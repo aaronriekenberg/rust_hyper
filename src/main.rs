@@ -3,6 +3,7 @@ extern crate crypto;
 extern crate hyper;
 #[macro_use] extern crate horrorshow;
 extern crate fern;
+extern crate futures;
 extern crate futures_cpupool;
 #[macro_use] extern crate log;
 extern crate mime;
@@ -46,6 +47,7 @@ fn log_executable_info() {
 
 fn build_route_configuration(config: &config::Configuration) -> server::RouteConfiguration {
   let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
+  let mut path_to_threadpool_handler = server::RouteConfigurationHandlerMap::new();
 
   let index_handler =
     handlers::index::IndexHandler::new(config).expect("error creating IndexHandler");
@@ -54,7 +56,7 @@ fn build_route_configuration(config: &config::Configuration) -> server::RouteCon
   for command_info in config.commands() {
     let handler =
       handlers::command::CommandHandler::new(command_info.clone());
-    path_to_handler.insert(command_info.http_path().clone(), Box::new(handler));
+    path_to_threadpool_handler.insert(command_info.http_path().clone(), Box::new(handler));
   }
 
   for static_path_info in config.static_paths() {
@@ -64,13 +66,14 @@ fn build_route_configuration(config: &config::Configuration) -> server::RouteCon
         static_path_info.fs_path().clone(),
         mime_type,
         static_path_info.cache_max_age_seconds());
-    path_to_handler.insert(static_path_info.http_path().clone(), Box::new(handler));
+    path_to_threadpool_handler.insert(static_path_info.http_path().clone(), Box::new(handler));
   }
 
   let not_found_handler = Box::new(handlers::not_found::NotFoundHandler);
 
   server::RouteConfiguration::new(
     path_to_handler,
+    path_to_threadpool_handler,
     not_found_handler)
 }
 
