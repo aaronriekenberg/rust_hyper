@@ -52,12 +52,12 @@ fn build_route_configuration(config: &config::Configuration) -> server::RouteCon
 
   let index_handler =
     handlers::index::IndexHandler::new(config).expect("error creating IndexHandler");
-  path_to_handler.insert("/".to_string(), Arc::new(Box::new(index_handler)));
+  path_to_handler.insert("/".to_string(), Arc::new(index_handler));
 
   for command_info in config.commands() {
     let handler =
       handlers::command::CommandHandler::new(command_info.clone());
-    path_to_handler.insert(command_info.http_path().clone(), Arc::new(Box::new(handler)));
+    path_to_handler.insert(command_info.http_path().clone(), Arc::new(handler));
   }
 
   for static_path_info in config.static_paths() {
@@ -67,14 +67,14 @@ fn build_route_configuration(config: &config::Configuration) -> server::RouteCon
         static_path_info.fs_path().clone(),
         mime_type,
         static_path_info.cache_max_age_seconds());
-    path_to_handler.insert(static_path_info.http_path().clone(), Arc::new(Box::new(handler)));
+    path_to_handler.insert(static_path_info.http_path().clone(), Arc::new(handler));
   }
 
   let not_found_handler = handlers::not_found::NotFoundHandler;
 
   server::RouteConfiguration::new(
     path_to_handler,
-    Arc::new(Box::new(not_found_handler)))
+    Arc::new(not_found_handler))
 }
 
 fn create_threaded_server(config: &config::Configuration) -> server::ThreadedServer {
