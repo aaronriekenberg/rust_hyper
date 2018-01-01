@@ -206,18 +206,19 @@ impl hyper::server::Service for ThreadedServer {
 
     let route_configuration = &self.inner.route_configuration;
 
-    let handler = Arc::clone(
-      route_configuration.path_to_handler()
+    let handler = route_configuration.path_to_handler()
        .get(req_context.req().path())
-       .unwrap_or(route_configuration.not_found_handler()));
+       .unwrap_or(route_configuration.not_found_handler());
 
     if handler.use_threadpool() {
+
+      let handler_clone = Arc::clone(handler);
 
       Box::new(self.inner.cpu_pool.spawn_fn(move || {
 
         debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
 
-        let response = handler.handle(&req_context);
+        let response = handler_clone.handle(&req_context);
 
         log_request_and_response(&req_context, &response);
 
