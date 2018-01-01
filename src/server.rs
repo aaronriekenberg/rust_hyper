@@ -11,9 +11,9 @@ use hyper::StatusCode;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::rc::Rc;
 use std::sync::Arc;
-use std::time::{Duration, Instant, SystemTime};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::time::{Instant, SystemTime};
 use std::thread;
 
 use utils;
@@ -41,15 +41,18 @@ impl RequestContext {
 }
 
 pub trait RequestHandler : Send + Sync {
+
+  fn use_threadpool(&self) -> bool;
+
   fn handle(&self, req_context: &RequestContext) -> Response;
+
 }
 
-pub type RouteConfigurationHandler = Box<RequestHandler>;
+pub type RouteConfigurationHandler = Arc<Box<RequestHandler>>;
 pub type RouteConfigurationHandlerMap = HashMap<String, RouteConfigurationHandler>;
 
 pub struct RouteConfiguration {
   path_to_handler: RouteConfigurationHandlerMap,
-  path_to_threadpool_handler: RouteConfigurationHandlerMap,
   not_found_handler: RouteConfigurationHandler
 }
 
@@ -57,21 +60,15 @@ impl RouteConfiguration {
 
   pub fn new(
     path_to_handler: RouteConfigurationHandlerMap,
-    path_to_threadpool_handler: RouteConfigurationHandlerMap,
     not_found_handler: RouteConfigurationHandler) -> Self {
     RouteConfiguration {
       path_to_handler: path_to_handler,
-      path_to_threadpool_handler: path_to_threadpool_handler,
       not_found_handler: not_found_handler
     }
   }
 
   pub fn path_to_handler(&self) -> &RouteConfigurationHandlerMap {
     &self.path_to_handler
-  }
-
-  pub fn path_to_threadpool_handler(&self) -> &RouteConfigurationHandlerMap {
-    &self.path_to_threadpool_handler
   }
 
   pub fn not_found_handler(&self) -> &RouteConfigurationHandler {
@@ -165,31 +162,20 @@ pub fn log_request_and_response(
 
 struct InnerThreadedServer {
   cpu_pool: CpuPool,
-  max_pending_tasks: usize,
-  pending_tasks: AtomicUsize,
   route_configuration: RouteConfiguration
-}
-
-impl InnerThreadedServer {
-
-  fn decrement_pending_tasks(&self) {
-    self.pending_tasks.fetch_sub(1, Ordering::SeqCst);
-  }
-
 }
 
 type ThreadedServerFuture = Box<Future<Item = hyper::Response, Error = hyper::Error>>;
 
 #[derive(Clone)]
 pub struct ThreadedServer {
-  inner: Arc<InnerThreadedServer>
+  inner: Rc<InnerThreadedServer>
 }
 
 impl ThreadedServer {
 
   pub fn new(
     pool_threads: usize,
-    max_pending_tasks: usize,
     route_configuration: RouteConfiguration) -> Self {
 
     let cpu_pool = futures_cpupool::Builder::new()
@@ -197,31 +183,12 @@ impl ThreadedServer {
       .name_prefix("server-")
       .create();
 
-    let inner = Arc::new(InnerThreadedServer {
+    let inner = Rc::new(InnerThreadedServer {
       cpu_pool: cpu_pool,
-      max_pending_tasks: max_pending_tasks,
-      pending_tasks: AtomicUsize::new(0),
       route_configuration: route_configuration
     });
 
     ThreadedServer { inner: inner }
-  }
-
-  fn wait_for_pending_tasks(&self) {
-    let inner = &self.inner;
-    loop {
-      let pending_tasks = inner.pending_tasks.load(Ordering::SeqCst);
-      if pending_tasks < inner.max_pending_tasks {
-        break;
-      } else {
-        warn!("pending tasks is big: {}", pending_tasks);
-        thread::sleep(Duration::from_millis(100));
-      }
-    }
-  }
-
-  fn increment_pending_tasks(&self) {
-    self.inner.pending_tasks.fetch_add(1, Ordering::SeqCst);
   }
 
 }
@@ -237,37 +204,28 @@ impl hyper::server::Service for ThreadedServer {
 
     let req_context = RequestContext::new(req);
 
-    if self.inner.route_configuration.path_to_threadpool_handler()
-         .contains_key(req_context.req().path()) {
+    let route_configuration = &self.inner.route_configuration;
 
-      self.wait_for_pending_tasks();
+    let handler = Arc::clone(
+      route_configuration.path_to_handler()
+       .get(req_context.req().path())
+       .unwrap_or(route_configuration.not_found_handler()));
 
-      let inner = Arc::clone(&self.inner);
-
-      self.increment_pending_tasks();
+    if handler.use_threadpool() {
 
       Box::new(self.inner.cpu_pool.spawn_fn(move || {
 
         debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
 
-        let handler = inner.route_configuration.path_to_threadpool_handler()
-          .get(req_context.req().path()).unwrap();
-
         let response = handler.handle(&req_context);
 
         log_request_and_response(&req_context, &response);
-
-        inner.decrement_pending_tasks();
 
         Ok(response)
 
       }))
 
     } else {
-
-      let handler = self.inner.route_configuration.path_to_handler()
-        .get(req_context.req().path())
-        .unwrap_or(self.inner.route_configuration.not_found_handler());
 
       let response = handler.handle(&req_context);
 

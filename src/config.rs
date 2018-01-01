@@ -86,7 +86,6 @@ impl MainPageInfo {
 pub struct Configuration {
   listen_address: String,
   threads: usize,
-  max_pending_tasks: usize,
   main_page_info: MainPageInfo,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
@@ -100,10 +99,6 @@ impl Configuration {
 
   pub fn threads(&self) -> usize {
     self.threads
-  }
-
-  pub fn max_pending_tasks(&self) -> usize {
-    self.max_pending_tasks
   }
 
   pub fn main_page_info(&self) -> &MainPageInfo {

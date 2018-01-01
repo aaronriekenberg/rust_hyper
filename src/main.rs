@@ -17,6 +17,8 @@ mod utils;
 
 use chrono::prelude::Local;
 
+use std::sync::Arc;
+
 fn initialize_logging() -> Result<(), fern::InitError>{
   fern::Dispatch::new()
     .level(log::LevelFilter::Info)
@@ -47,16 +49,15 @@ fn log_executable_info() {
 
 fn build_route_configuration(config: &config::Configuration) -> server::RouteConfiguration {
   let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
-  let mut path_to_threadpool_handler = server::RouteConfigurationHandlerMap::new();
 
   let index_handler =
     handlers::index::IndexHandler::new(config).expect("error creating IndexHandler");
-  path_to_handler.insert("/".to_string(), Box::new(index_handler));
+  path_to_handler.insert("/".to_string(), Arc::new(Box::new(index_handler)));
 
   for command_info in config.commands() {
     let handler =
       handlers::command::CommandHandler::new(command_info.clone());
-    path_to_threadpool_handler.insert(command_info.http_path().clone(), Box::new(handler));
+    path_to_handler.insert(command_info.http_path().clone(), Arc::new(Box::new(handler)));
   }
 
   for static_path_info in config.static_paths() {
@@ -66,15 +67,14 @@ fn build_route_configuration(config: &config::Configuration) -> server::RouteCon
         static_path_info.fs_path().clone(),
         mime_type,
         static_path_info.cache_max_age_seconds());
-    path_to_threadpool_handler.insert(static_path_info.http_path().clone(), Box::new(handler));
+    path_to_handler.insert(static_path_info.http_path().clone(), Arc::new(Box::new(handler)));
   }
 
-  let not_found_handler = Box::new(handlers::not_found::NotFoundHandler);
+  let not_found_handler = handlers::not_found::NotFoundHandler;
 
   server::RouteConfiguration::new(
     path_to_handler,
-    path_to_threadpool_handler,
-    not_found_handler)
+    Arc::new(Box::new(not_found_handler)))
 }
 
 fn create_threaded_server(config: &config::Configuration) -> server::ThreadedServer {
@@ -83,7 +83,6 @@ fn create_threaded_server(config: &config::Configuration) -> server::ThreadedSer
 
   server::ThreadedServer::new(
     config.threads(),
-    config.max_pending_tasks(),
     route_configuration)
 }
 
