@@ -12,6 +12,11 @@ main_page_info:
 
 commands:
 
+- http_path: /arp
+  description: arp
+  command: arp
+  args: [-a, -n]
+
 - http_path: /dmesg
   description: dmesg
   command: dmesg
