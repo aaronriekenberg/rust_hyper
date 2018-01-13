@@ -9,8 +9,10 @@ use hyper::header;
 use hyper::server::{Request, Response};
 use hyper::StatusCode;
 
+use std;
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::net::SocketAddr;
 use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
@@ -168,13 +170,13 @@ struct InnerThreadedServer {
 type ThreadedServerFuture = Box<Future<Item = hyper::Response, Error = hyper::Error>>;
 
 #[derive(Clone)]
-pub struct ThreadedServer {
+struct ThreadedServer {
   inner: Rc<InnerThreadedServer>
 }
 
 impl ThreadedServer {
 
-  pub fn new(
+  fn new(
     pool_threads: usize,
     route_configuration: RouteConfiguration) -> Self {
 
@@ -238,4 +240,27 @@ impl hyper::server::Service for ThreadedServer {
 
   }
 
+}
+
+pub fn run_forever(
+  listen_addr: SocketAddr,
+  pool_threads: usize,
+  route_configuration: RouteConfiguration) -> Result<(), Box<std::error::Error>> {
+
+  let threaded_server = ThreadedServer::new(
+    pool_threads,
+    route_configuration);
+
+  let http_server = hyper::server::Http::new()
+    .bind(&listen_addr, move || Ok(threaded_server.clone()))?;
+
+  let local_addr = http_server.local_addr()?;
+
+  info!("Listening on http://{} with cpu pool size {}",
+        local_addr,
+        pool_threads);
+
+  http_server.run()?;
+
+  Ok(())
 }

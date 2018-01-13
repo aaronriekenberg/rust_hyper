@@ -77,15 +77,6 @@ fn build_route_configuration(config: &config::Configuration) -> server::RouteCon
     Arc::new(not_found_handler))
 }
 
-fn create_threaded_server(config: &config::Configuration) -> server::ThreadedServer {
-
-  let route_configuration = build_route_configuration(&config);
-
-  server::ThreadedServer::new(
-    config.threads(),
-    route_configuration)
-}
-
 fn main() {
   initialize_logging().expect("failed to initialize logging");
 
@@ -98,15 +89,10 @@ fn main() {
 
   let listen_addr = config.listen_address().parse().expect("invalid listen_address");
 
-  let threaded_server = create_threaded_server(&config);
+  let route_configuration = build_route_configuration(&config);
 
-  let http_server = hyper::server::Http::new()
-    .bind(&listen_addr, move || Ok(threaded_server.clone()))
-    .expect("bind failed");
-
-  info!("Listening on http://{} with cpu pool size {}",
-        http_server.local_addr().unwrap(),
-        config.threads());
-
-  http_server.run().expect("http_server.run failed");
+  server::run_forever(
+   listen_addr,
+   config.threads(),
+   route_configuration).expect("server::run_forever failed");
 }
