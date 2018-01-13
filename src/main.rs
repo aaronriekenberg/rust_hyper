@@ -9,6 +9,7 @@ extern crate futures_cpupool;
 extern crate mime;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
+extern crate tokio_core;
 
 mod config;
 mod handlers;

@@ -1,5 +1,5 @@
 use futures;
-use futures::Future;
+use futures::{Future, Stream};
 
 use futures_cpupool;
 use futures_cpupool::CpuPool;
@@ -18,18 +18,22 @@ use std::sync::Arc;
 use std::time::{Instant, SystemTime};
 use std::thread;
 
+use tokio_core::reactor::Core;
+use tokio_core::net::TcpListener;
+
 use utils;
 
 #[derive(Debug)]
 pub struct RequestContext {
   req: Request,
-  start_time: Instant
+  start_time: Instant,
+  remote_addr: Option<SocketAddr>
 }
 
 impl RequestContext {
 
-  fn new(req: Request) -> Self {
-    RequestContext { req: req, start_time: Instant::now() }
+  fn new(req: Request, remote_addr: Option<SocketAddr>) -> Self {
+    RequestContext { req: req, start_time: Instant::now(), remote_addr: remote_addr }
   }
 
   pub fn req(&self) -> &Request {
@@ -38,6 +42,10 @@ impl RequestContext {
 
   pub fn start_time(&self) -> &Instant {
     &self.start_time
+  }
+
+  pub fn remote_addr(&self) -> Option<SocketAddr> {
+    self.remote_addr
   }
 
 }
@@ -135,7 +143,7 @@ pub fn log_request_and_response(
 
   let req = req_context.req();
 
-  let remote_addr = match req.remote_addr() {
+  let remote_addr = match req_context.remote_addr() {
     Some(remote_addr) => Cow::from(remote_addr.to_string()),
     None => Cow::from("")
   };
@@ -171,7 +179,8 @@ type ThreadedServerFuture = Box<Future<Item = hyper::Response, Error = hyper::Er
 
 #[derive(Clone)]
 struct ThreadedServer {
-  inner: Rc<InnerThreadedServer>
+  inner: Rc<InnerThreadedServer>,
+  remote_addr: Option<SocketAddr>
 }
 
 impl ThreadedServer {
@@ -190,7 +199,11 @@ impl ThreadedServer {
       route_configuration: route_configuration
     });
 
-    ThreadedServer { inner: inner }
+    ThreadedServer { inner: inner, remote_addr: None }
+  }
+
+  fn clone_with_remote_addr(&self, remote_addr: SocketAddr) -> Self {
+    ThreadedServer { inner: self.inner.clone(), remote_addr: Some(remote_addr) }
   }
 
 }
@@ -204,7 +217,7 @@ impl hyper::server::Service for ThreadedServer {
 
   fn call(&self, req: Request) -> Self::Future {
 
-    let req_context = RequestContext::new(req);
+    let req_context = RequestContext::new(req, self.remote_addr);
 
     let route_configuration = &self.inner.route_configuration;
 
@@ -247,20 +260,36 @@ pub fn run_forever(
   pool_threads: usize,
   route_configuration: RouteConfiguration) -> Result<(), Box<std::error::Error>> {
 
+  let mut core = Core::new()?;
+
+  let handle = core.handle();
+
+  let tcp_listener = TcpListener::bind(&listen_addr, &handle)?;
+
+  let http = hyper::server::Http::<hyper::Chunk>::new();
+
   let threaded_server = ThreadedServer::new(
     pool_threads,
     route_configuration);
 
-  let http_server = hyper::server::Http::new()
-    .bind(&listen_addr, move || Ok(threaded_server.clone()))?;
-
-  let local_addr = http_server.local_addr()?;
+  let local_addr = tcp_listener.local_addr()?;
 
   info!("Listening on http://{} with cpu pool size {}",
         local_addr,
         pool_threads);
 
-  http_server.run()?;
+  let listener_future = tcp_listener.incoming()
+    .for_each(|(socket, remote_addr)| {
+      let connection_future = http.serve_connection(
+        socket,
+        threaded_server.clone_with_remote_addr(remote_addr))
+        .map(|_| ())
+        .map_err(move |err| error!("server connection error: ({}) {}", remote_addr, err));
+      handle.spawn(connection_future);
+      Ok(())
+  });
+
+  core.run(listener_future)?;
 
   Ok(())
 }
