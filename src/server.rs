@@ -173,7 +173,7 @@ pub fn log_request_and_response(
 }
 
 struct InnerThreadedServer {
-  cpu_pool: CpuPool,
+  worker_pool: CpuPool,
   route_configuration: RouteConfiguration
 }
 
@@ -191,13 +191,13 @@ impl ThreadedServer {
     worker_threads: usize,
     route_configuration: RouteConfiguration) -> Self {
 
-    let cpu_pool = futures_cpupool::Builder::new()
+    let worker_pool = futures_cpupool::Builder::new()
       .pool_size(worker_threads)
       .name_prefix("worker-")
       .create();
 
     let inner = Arc::new(InnerThreadedServer {
-      cpu_pool: cpu_pool,
+      worker_pool: worker_pool,
       route_configuration: route_configuration
     });
 
@@ -231,7 +231,7 @@ impl hyper::server::Service for ThreadedServer {
 
       let handler_clone = Arc::clone(handler);
 
-      Box::new(self.inner.cpu_pool.spawn_fn(move || {
+      Box::new(self.inner.worker_pool.spawn_fn(move || {
 
         debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
 
@@ -259,7 +259,7 @@ impl hyper::server::Service for ThreadedServer {
 
 fn run_handler_thread(
   listen_addr: SocketAddr,
-  threaded_server: ThreadedServer) -> Result<(), Box<std::error::Error>> {
+  threaded_server: ThreadedServer) -> Result<(), Box<std::error::Error + Send + Sync>> {
 
   let mut core = Core::new()?;
 
@@ -304,14 +304,13 @@ pub fn run_forever(
     worker_threads,
     route_configuration);
 
-  let mut join_handles: Vec<std::thread::JoinHandle<Result<(), ()>>> = Vec::with_capacity(handler_threads);
+  let mut join_handles = Vec::with_capacity(handler_threads);
 
   for i in 0..handler_threads {
     let name = format!("handler-{}", i);
     let threaded_server_clone = threaded_server.clone();
     let join_handle = std::thread::Builder::new().name(name).spawn(move || {
-      run_handler_thread(listen_addr, threaded_server_clone).expect("child thread failed");
-      Ok(())
+      run_handler_thread(listen_addr, threaded_server_clone)
     })?;
     join_handles.push(join_handle);
   }
@@ -322,8 +321,8 @@ pub fn run_forever(
         worker_threads);
 
   for join_handle in join_handles {
-    let _ = join_handle.join();
-    return Err(From::from("join_handle.join returned unexpectedly"));
+    let result = join_handle.join();
+    return Err(From::from(format!("join_handle.join returned unexpectedly result = {:?}", result)));
   }
 
   Err(From::from("run_forever returning"))
