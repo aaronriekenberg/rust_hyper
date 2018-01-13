@@ -14,7 +14,7 @@ commands:
 
 - http_path: /arp
   description: arp
-  command: arp
+  command: /usr/sbin/arp
   args: [-a, -n]
 
 - http_path: /dmesg
