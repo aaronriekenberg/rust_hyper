@@ -18,7 +18,6 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
-use std::thread;
 
 use tokio_core::reactor::Core;
 use tokio_core::net::TcpListener;
@@ -205,7 +204,22 @@ impl ThreadedServer {
   }
 
   fn clone_with_remote_addr(&self, remote_addr: SocketAddr) -> Self {
-    ThreadedServer { inner: Arc::clone(&self.inner), remote_addr: Some(remote_addr) }
+
+    ThreadedServer {
+      inner: Arc::clone(&self.inner),
+      remote_addr: Some(remote_addr)
+    }
+  }
+
+  fn invoke_handler(
+    handler: &RouteConfigurationHandler,
+    req_context: &RequestContext) -> hyper::Response {
+
+    let response = handler.handle(&req_context);
+
+    log_request_and_response(&req_context, &response);
+
+    response
   }
 
 }
@@ -233,23 +247,13 @@ impl hyper::server::Service for ThreadedServer {
 
       Box::new(self.inner.worker_pool.spawn_fn(move || {
 
-        debug!("do_in_thread thread {:?} req_context {:?}", thread::current().name(), req_context);
-
-        let response = handler_clone.handle(&req_context);
-
-        log_request_and_response(&req_context, &response);
-
-        Ok(response)
+        Ok(ThreadedServer::invoke_handler(&handler_clone, &req_context))
 
       }))
 
     } else {
 
-      let response = handler.handle(&req_context);
-
-      log_request_and_response(&req_context, &response);
-
-      Box::new(futures::future::ok(response))
+      Box::new(futures::future::ok(ThreadedServer::invoke_handler(&handler, &req_context)))
 
     }
 
