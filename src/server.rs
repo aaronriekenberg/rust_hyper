@@ -278,13 +278,14 @@ fn run_handler_thread(
 
   let listener_future = tcp_listener.incoming()
     .for_each(move |(socket, remote_addr)| {
-      socket.set_nodelay(true)?;
-      let connection_future = http.serve_connection(
-        socket,
-        threaded_server.clone_with_remote_addr(remote_addr))
-        .map(|_| ())
-        .map_err(move |err| error!("server connection error: ({}) {}", remote_addr, err));
-      handle.spawn(connection_future);
+      if let Ok(_) = socket.set_nodelay(true) {
+        let connection_future = http.serve_connection(
+          socket,
+          threaded_server.clone_with_remote_addr(remote_addr))
+          .map(|_| ())
+          .map_err(move |err| error!("server connection error: ({}) {}", remote_addr, err));
+        handle.spawn(connection_future);
+      }
       Ok(())
   });
 
