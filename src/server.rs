@@ -277,7 +277,7 @@ fn run_handler_thread(
   info!("started handler thread");
 
   let listener_future = tcp_listener.incoming()
-    .for_each(|(socket, remote_addr)| {
+    .for_each(move |(socket, remote_addr)| {
       socket.set_nodelay(true)?;
       let connection_future = http.serve_connection(
         socket,
