@@ -278,6 +278,7 @@ fn run_handler_thread(
 
   let listener_future = tcp_listener.incoming()
     .for_each(|(socket, remote_addr)| {
+      socket.set_nodelay(true)?;
       let connection_future = http.serve_connection(
         socket,
         threaded_server.clone_with_remote_addr(remote_addr))
