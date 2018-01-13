@@ -203,7 +203,7 @@ impl ThreadedServer {
   }
 
   fn clone_with_remote_addr(&self, remote_addr: SocketAddr) -> Self {
-    ThreadedServer { inner: self.inner.clone(), remote_addr: Some(remote_addr) }
+    ThreadedServer { inner: Rc::clone(&self.inner), remote_addr: Some(remote_addr) }
   }
 
 }
@@ -291,5 +291,5 @@ pub fn run_forever(
 
   core.run(listener_future)?;
 
-  Ok(())
+  Err(From::from("core.run returned unexpectedly"))
 }
