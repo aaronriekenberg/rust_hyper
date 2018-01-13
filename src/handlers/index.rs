@@ -93,7 +93,7 @@ impl IndexHandler {
 
 impl server::RequestHandler for IndexHandler {
 
-  fn use_threadpool(&self) -> bool { false }
+  fn use_worker_threadpool(&self) -> bool { false }
 
   fn handle(&self, req_context: &server::RequestContext) -> Response {
     if let Some(response) = server::handle_not_modified(

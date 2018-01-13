@@ -41,7 +41,7 @@ impl StaticFileHandler {
 
 impl server::RequestHandler for StaticFileHandler {
 
-  fn use_threadpool(&self) -> bool { true }
+  fn use_worker_threadpool(&self) -> bool { true }
 
   fn handle(&self, req_context: &server::RequestContext) -> Response {
     debug!("StaticFileHandler.handle req_context = {:?}", req_context);

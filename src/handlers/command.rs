@@ -102,7 +102,7 @@ impl CommandHandler {
 
 impl server::RequestHandler for CommandHandler {
 
-  fn use_threadpool(&self) -> bool { true }
+  fn use_worker_threadpool(&self) -> bool { true }
 
   fn handle(&self, _: &server::RequestContext) -> Response {
     let command_output = self.run_command();

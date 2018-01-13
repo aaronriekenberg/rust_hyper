@@ -9,11 +9,13 @@ use hyper::header;
 use hyper::server::{Request, Response};
 use hyper::StatusCode;
 
+use net2;
+use net2::unix::UnixTcpBuilderExt;
+
 use std;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::net::SocketAddr;
-use std::rc::Rc;
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
 use std::thread;
@@ -52,7 +54,7 @@ impl RequestContext {
 
 pub trait RequestHandler : Send + Sync {
 
-  fn use_threadpool(&self) -> bool;
+  fn use_worker_threadpool(&self) -> bool;
 
   fn handle(&self, req_context: &RequestContext) -> Response;
 
@@ -179,22 +181,22 @@ type ThreadedServerFuture = Box<Future<Item = hyper::Response, Error = hyper::Er
 
 #[derive(Clone)]
 struct ThreadedServer {
-  inner: Rc<InnerThreadedServer>,
+  inner: Arc<InnerThreadedServer>,
   remote_addr: Option<SocketAddr>
 }
 
 impl ThreadedServer {
 
   fn new(
-    pool_threads: usize,
+    worker_threads: usize,
     route_configuration: RouteConfiguration) -> Self {
 
     let cpu_pool = futures_cpupool::Builder::new()
-      .pool_size(pool_threads)
-      .name_prefix("server-")
+      .pool_size(worker_threads)
+      .name_prefix("worker-")
       .create();
 
-    let inner = Rc::new(InnerThreadedServer {
+    let inner = Arc::new(InnerThreadedServer {
       cpu_pool: cpu_pool,
       route_configuration: route_configuration
     });
@@ -203,7 +205,7 @@ impl ThreadedServer {
   }
 
   fn clone_with_remote_addr(&self, remote_addr: SocketAddr) -> Self {
-    ThreadedServer { inner: Rc::clone(&self.inner), remote_addr: Some(remote_addr) }
+    ThreadedServer { inner: Arc::clone(&self.inner), remote_addr: Some(remote_addr) }
   }
 
 }
@@ -225,7 +227,7 @@ impl hyper::server::Service for ThreadedServer {
        .get(req_context.req().path())
        .unwrap_or(route_configuration.not_found_handler());
 
-    if handler.use_threadpool() {
+    if handler.use_worker_threadpool() {
 
       let handler_clone = Arc::clone(handler);
 
@@ -255,28 +257,24 @@ impl hyper::server::Service for ThreadedServer {
 
 }
 
-pub fn run_forever(
+fn run_handler_thread(
   listen_addr: SocketAddr,
-  pool_threads: usize,
-  route_configuration: RouteConfiguration) -> Result<(), Box<std::error::Error>> {
+  threaded_server: ThreadedServer) -> Result<(), Box<std::error::Error>> {
 
   let mut core = Core::new()?;
 
   let handle = core.handle();
 
-  let tcp_listener = TcpListener::bind(&listen_addr, &handle)?;
+  let net2_listener = net2::TcpBuilder::new_v4()?
+    .reuse_port(true)?
+    .bind(listen_addr)?
+    .listen(128)?;
+
+  let tcp_listener = TcpListener::from_listener(net2_listener, &listen_addr, &handle)?;
 
   let http = hyper::server::Http::<hyper::Chunk>::new();
 
-  let threaded_server = ThreadedServer::new(
-    pool_threads,
-    route_configuration);
-
-  let local_addr = tcp_listener.local_addr()?;
-
-  info!("Listening on http://{} with cpu pool size {}",
-        local_addr,
-        pool_threads);
+  info!("started handler thread");
 
   let listener_future = tcp_listener.incoming()
     .for_each(|(socket, remote_addr)| {
@@ -291,5 +289,42 @@ pub fn run_forever(
 
   core.run(listener_future)?;
 
-  Err(From::from("core.run returned unexpectedly"))
+  error!("core.run returned in handler thread");
+
+  Err(From::from("core.run returned in handler thread"))
+}
+
+pub fn run_forever(
+  listen_addr: SocketAddr,
+  handler_threads: usize,
+  worker_threads: usize,
+  route_configuration: RouteConfiguration) -> Result<(), Box<std::error::Error>> {
+
+  let threaded_server = ThreadedServer::new(
+    worker_threads,
+    route_configuration);
+
+  let mut join_handles: Vec<std::thread::JoinHandle<Result<(), ()>>> = Vec::with_capacity(handler_threads);
+
+  for i in 0..handler_threads {
+    let name = format!("handler-{}", i);
+    let threaded_server_clone = threaded_server.clone();
+    let join_handle = std::thread::Builder::new().name(name).spawn(move || {
+      run_handler_thread(listen_addr, threaded_server_clone).expect("child thread failed");
+      Ok(())
+    })?;
+    join_handles.push(join_handle);
+  }
+
+  info!("Listening on http://{} handler_threads={} worker_threads={}",
+        listen_addr,
+        handler_threads,
+        worker_threads);
+
+  for join_handle in join_handles {
+    let _ = join_handle.join();
+    return Err(From::from("join_handle.join returned unexpectedly"));
+  }
+
+  Err(From::from("run_forever returning"))
 }

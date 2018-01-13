@@ -1,6 +1,8 @@
 listen_address: 127.0.0.1:8080
 
-threads: 8
+handler_threads: 8
+
+worker_threads: 4
 
 max_pending_tasks: 200
 

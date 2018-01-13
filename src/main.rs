@@ -7,6 +7,7 @@ extern crate futures;
 extern crate futures_cpupool;
 #[macro_use] extern crate log;
 extern crate mime;
+extern crate net2;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
 extern crate tokio_core;
@@ -94,6 +95,7 @@ fn main() {
 
   server::run_forever(
    listen_addr,
-   config.threads(),
+   config.handler_threads(),
+   config.worker_threads(),
    route_configuration).expect("server::run_forever failed");
 }

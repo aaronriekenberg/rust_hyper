@@ -85,7 +85,8 @@ impl MainPageInfo {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Configuration {
   listen_address: String,
-  threads: usize,
+  handler_threads: usize,
+  worker_threads: usize,
   main_page_info: MainPageInfo,
   commands: Vec<CommandInfo>,
   static_paths: Vec<StaticPathInfo>
@@ -97,8 +98,12 @@ impl Configuration {
     &self.listen_address
   }
 
-  pub fn threads(&self) -> usize {
-    self.threads
+  pub fn handler_threads(&self) -> usize {
+    self.handler_threads
+  }
+
+  pub fn worker_threads(&self) -> usize {
+    self.worker_threads
   }
 
   pub fn main_page_info(&self) -> &MainPageInfo {
