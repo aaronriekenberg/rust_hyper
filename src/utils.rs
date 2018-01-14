@@ -4,7 +4,6 @@ use chrono::{DateTime, TimeZone};
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
-use std;
 use std::fs::File;
 use std::io::Read;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -37,7 +36,7 @@ pub fn duration_in_seconds_f64(duration: &Duration) -> f64 {
   (duration.as_secs() as f64) + ((duration.subsec_nanos() as f64) / 1e9)
 }
 
-pub fn file_sha256(path: String) -> Result<String, std::io::Error> {
+pub fn file_sha256(path: String) -> Result<String, ::std::io::Error> {
   let mut file = File::open(path)?;
 
   let mut hasher = Sha256::new();

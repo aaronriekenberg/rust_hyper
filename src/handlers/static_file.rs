@@ -4,9 +4,6 @@ use hyper::header;
 use hyper::server::Response;
 use hyper::StatusCode;
 
-use server;
-
-use std;
 use std::fs;
 use std::fs::File;
 use std::io::Read;
@@ -27,7 +24,7 @@ impl StaticFileHandler {
     }
   }
 
-  fn read_file(&self) -> Result<Vec<u8>, std::io::Error> {
+  fn read_file(&self) -> Result<Vec<u8>, ::std::io::Error> {
     let mut file = File::open(&self.file_path)?;
 
     let mut file_contents = Vec::new();
@@ -39,27 +36,27 @@ impl StaticFileHandler {
 
 }
 
-impl server::RequestHandler for StaticFileHandler {
+impl ::server::RequestHandler for StaticFileHandler {
 
   fn use_worker_threadpool(&self) -> bool { true }
 
-  fn handle(&self, req_context: &server::RequestContext) -> Response {
+  fn handle(&self, req_context: &::server::RequestContext) -> Response {
     debug!("StaticFileHandler.handle req_context = {:?}", req_context);
 
     let file_metadata =
       match fs::metadata(&self.file_path) {
         Ok(metadata) => metadata,
-        Err(_) => return server::build_response_status(StatusCode::NotFound)
+        Err(_) => return ::server::build_response_status(StatusCode::NotFound)
       };
 
     let file_modified =
       match file_metadata.modified() {
         Ok(file_modified) => file_modified,
-        Err(_) => return server::build_response_status(StatusCode::NotFound)
+        Err(_) => return ::server::build_response_status(StatusCode::NotFound)
       };
 
-    if let Some(response) = server::handle_not_modified(
-      req_context.req(),
+    if let Some(response) = ::server::handle_not_modified(
+      &req_context,
       &file_modified,
       self.cache_max_age_seconds) {
       return response;
@@ -67,7 +64,7 @@ impl server::RequestHandler for StaticFileHandler {
 
     match self.read_file() {
       Ok(file_contents) => {
-        server::build_response_vec(
+        ::server::build_response_vec(
           StatusCode::Ok,
           file_contents,
           header::ContentType(self.mime_type.clone()))
@@ -77,7 +74,7 @@ impl server::RequestHandler for StaticFileHandler {
                   header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
       },
       Err(_) => {
-        server::build_response_status(StatusCode::NotFound)
+        ::server::build_response_status(StatusCode::NotFound)
       }
     }
   }

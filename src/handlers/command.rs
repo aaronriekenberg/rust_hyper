@@ -1,7 +1,5 @@
 use chrono::prelude::Local;
 
-use config;
-
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
@@ -9,21 +7,17 @@ use hyper::header;
 use hyper::server::Response;
 use hyper::StatusCode;
 
-use server;
-
 use std::borrow::Cow;
 use std::process::Command;
 
-use utils;
-
 pub struct CommandHandler {
-  command_info: config::CommandInfo,
+  command_info: ::config::CommandInfo,
   command_line_string: String
 }
 
 impl CommandHandler {
 
-  pub fn new(command_info: config::CommandInfo) -> Self {
+  pub fn new(command_info: ::config::CommandInfo) -> Self {
 
     let mut command_line_string = String::new();
 
@@ -64,7 +58,7 @@ impl CommandHandler {
     let mut pre_string = String::with_capacity(command_output.len() + 100);
 
     pre_string.push_str("Now: ");
-    pre_string.push_str(&utils::local_time_to_string(Local::now()));
+    pre_string.push_str(&::utils::local_time_to_string(Local::now()));
     pre_string.push_str("\n\n");
     pre_string.push_str(&self.command_line_string);
     pre_string.push_str("\n\n");
@@ -100,18 +94,18 @@ impl CommandHandler {
 
 }
 
-impl server::RequestHandler for CommandHandler {
+impl ::server::RequestHandler for CommandHandler {
 
   fn use_worker_threadpool(&self) -> bool { true }
 
-  fn handle(&self, _: &server::RequestContext) -> Response {
+  fn handle(&self, _: &::server::RequestContext) -> Response {
     let command_output = self.run_command();
 
     let pre_string = self.build_pre_string(command_output);
 
     let html_string = self.build_html_string(pre_string);
 
-    server::build_response_string(
+    ::server::build_response_string(
       StatusCode::Ok,
       Cow::from(html_string),
       header::ContentType::html())

@@ -1,9 +1,6 @@
-use serde_yaml;
-
-use std;
 use std::io::Read;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct CommandInfo {
   http_path: String,
   description: String,
@@ -31,7 +28,7 @@ impl CommandInfo {
 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct StaticPathInfo {
   http_path: String,
   fs_path: String,
@@ -64,7 +61,7 @@ impl StaticPathInfo {
 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MainPageInfo {
   title: String,
   cache_max_age_seconds: u32
@@ -82,7 +79,7 @@ impl MainPageInfo {
 
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct Configuration {
   listen_address: String,
   handler_threads: usize,
@@ -120,16 +117,16 @@ impl Configuration {
 
 }
 
-pub fn read_config(config_file: String) -> Result<Configuration, Box<std::error::Error>> {
+pub fn read_config(config_file: String) -> Result<Configuration, Box<::std::error::Error>> {
   info!("reading {}", config_file);
 
-  let mut file = std::fs::File::open(config_file)?;
+  let mut file = ::std::fs::File::open(config_file)?;
 
   let mut file_contents = String::new();
 
   file.read_to_string(&mut file_contents)?;
 
-  let configuration: Configuration = serde_yaml::from_str(&file_contents)?;
+  let configuration: Configuration = ::serde_yaml::from_str(&file_contents)?;
 
   Ok(configuration)
 }

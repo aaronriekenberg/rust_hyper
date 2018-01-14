@@ -1,5 +1,3 @@
-use config;
-
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
@@ -7,13 +5,8 @@ use hyper::header;
 use hyper::server::Response;
 use hyper::StatusCode;
 
-use server;
-
-use std;
 use std::borrow::Cow;
 use std::time::SystemTime;
-
-use utils;
 
 pub struct IndexHandler {
   index_string: String,
@@ -23,7 +16,7 @@ pub struct IndexHandler {
 
 impl IndexHandler {
 
-  pub fn new(config: &config::Configuration) -> Result<Self, Box<std::error::Error>> {
+  pub fn new(config: &::config::Configuration) -> Result<Self, Box<::std::error::Error>> {
 
     let static_paths_to_include: Vec<_> = 
       config.static_paths().iter().filter(|s| s.include_in_main_page()).collect();
@@ -32,7 +25,7 @@ impl IndexHandler {
 
     let mut last_modified_string = String::new();
     last_modified_string.push_str("Last Modified: ");
-    last_modified_string.push_str(&utils::local_time_to_string(utils::system_time_to_local(&now)));
+    last_modified_string.push_str(&::utils::local_time_to_string(::utils::system_time_to_local(&now)));
 
     let s = html! {
       : doctype::HTML;
@@ -91,26 +84,30 @@ impl IndexHandler {
 
 }
 
-impl server::RequestHandler for IndexHandler {
+impl ::server::RequestHandler for IndexHandler {
 
   fn use_worker_threadpool(&self) -> bool { false }
 
-  fn handle(&self, req_context: &server::RequestContext) -> Response {
-    if let Some(response) = server::handle_not_modified(
-      req_context.req(),
+  fn handle(&self, req_context: &::server::RequestContext) -> Response {
+
+    match ::server::handle_not_modified(
+      &req_context,
       &self.creation_time,
       self.cache_max_age_seconds) {
-      return response;
-    }
 
-    server::build_response_string(
-      StatusCode::Ok,
-      Cow::from(self.index_string.clone()),
-      header::ContentType::html())
-      .with_header(header::LastModified(self.creation_time.into()))
-      .with_header(header::CacheControl(
-         vec![header::CacheDirective::Public,
-              header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
+      Some(response) => response,
+
+      None =>
+        ::server::build_response_string(
+          StatusCode::Ok,
+          Cow::from(self.index_string.clone()),
+          header::ContentType::html())
+          .with_header(header::LastModified(self.creation_time.into()))
+          .with_header(header::CacheControl(
+             vec![header::CacheDirective::Public,
+                  header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
+
+    }
   }
 
 }

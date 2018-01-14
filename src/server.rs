@@ -1,18 +1,13 @@
-use futures;
 use futures::{Future, Stream};
 
-use futures_cpupool;
 use futures_cpupool::CpuPool;
 
-use hyper;
 use hyper::header;
 use hyper::server::{Request, Response};
 use hyper::StatusCode;
 
-use net2;
 use net2::unix::UnixTcpBuilderExt;
 
-use std;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -21,8 +16,6 @@ use std::time::{Instant, SystemTime};
 
 use tokio_core::reactor::Core;
 use tokio_core::net::TcpListener;
-
-use utils;
 
 #[derive(Debug)]
 pub struct RequestContext {
@@ -117,15 +110,15 @@ pub fn build_response_vec(
 }
 
 pub fn handle_not_modified(
-  req: &Request,
+  req_context: &RequestContext,
   data_last_modified: &SystemTime,
   cache_max_age_seconds: u32) -> Option<Response> {
 
   if let Some(if_modified_since_header) =
-     req.headers().get::<header::IfModifiedSince>() {
+     req_context.req().headers().get::<header::IfModifiedSince>() {
     let if_modified_since = SystemTime::from(if_modified_since_header.0);
-    if utils::system_time_in_seconds_u64(&data_last_modified) <=
-       utils::system_time_in_seconds_u64(&if_modified_since) {
+    if ::utils::system_time_in_seconds_u64(&data_last_modified) <=
+       ::utils::system_time_in_seconds_u64(&if_modified_since) {
       return Some(
         build_response_status(StatusCode::NotModified)
           .with_header(header::LastModified((*data_last_modified).into()))
@@ -162,7 +155,7 @@ pub fn log_request_and_response(
     None => Cow::from("0")
   };
 
-  let duration = utils::duration_in_seconds_f64(&req_context.start_time().elapsed());
+  let duration = ::utils::duration_in_seconds_f64(&req_context.start_time().elapsed());
 
   info!("{} \"{} {} {}\" {} {} {:.9}s", 
         remote_addr,
@@ -176,7 +169,7 @@ struct InnerThreadedServer {
   route_configuration: RouteConfiguration
 }
 
-type ThreadedServerFuture = Box<Future<Item = hyper::Response, Error = hyper::Error>>;
+type ThreadedServerFuture = Box<Future<Item = ::hyper::Response, Error = ::hyper::Error>>;
 
 #[derive(Clone)]
 struct ThreadedServer {
@@ -190,7 +183,7 @@ impl ThreadedServer {
     worker_threads: usize,
     route_configuration: RouteConfiguration) -> Self {
 
-    let worker_pool = futures_cpupool::Builder::new()
+    let worker_pool = ::futures_cpupool::Builder::new()
       .pool_size(worker_threads)
       .name_prefix("worker-")
       .create();
@@ -213,7 +206,7 @@ impl ThreadedServer {
 
   fn invoke_handler(
     handler: &RouteConfigurationHandler,
-    req_context: &RequestContext) -> hyper::Response {
+    req_context: &RequestContext) -> ::hyper::Response {
 
     let response = handler.handle(&req_context);
 
@@ -224,11 +217,11 @@ impl ThreadedServer {
 
 }
 
-impl hyper::server::Service for ThreadedServer {
+impl ::hyper::server::Service for ThreadedServer {
 
-  type Request = hyper::Request;
-  type Response = hyper::Response;
-  type Error = hyper::Error;
+  type Request = ::hyper::Request;
+  type Response = ::hyper::Response;
+  type Error = ::hyper::Error;
   type Future = ThreadedServerFuture;
 
   fn call(&self, req: Request) -> Self::Future {
@@ -253,7 +246,7 @@ impl hyper::server::Service for ThreadedServer {
 
     } else {
 
-      Box::new(futures::future::ok(ThreadedServer::invoke_handler(&handler, &req_context)))
+      Box::new(::futures::future::ok(ThreadedServer::invoke_handler(&handler, &req_context)))
 
     }
 
@@ -263,20 +256,20 @@ impl hyper::server::Service for ThreadedServer {
 
 fn run_handler_thread(
   listen_addr: SocketAddr,
-  threaded_server: ThreadedServer) -> Result<(), Box<std::error::Error + Send + Sync>> {
+  threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error + Send + Sync>> {
 
   let mut core = Core::new()?;
 
   let handle = core.handle();
 
-  let net2_listener = net2::TcpBuilder::new_v4()?
+  let net2_listener = ::net2::TcpBuilder::new_v4()?
     .reuse_port(true)?
     .bind(listen_addr)?
     .listen(128)?;
 
   let tcp_listener = TcpListener::from_listener(net2_listener, &listen_addr, &handle)?;
 
-  let http = hyper::server::Http::<hyper::Chunk>::new();
+  let http = ::hyper::server::Http::<::hyper::Chunk>::new();
 
   info!("started handler thread");
 
@@ -304,7 +297,7 @@ pub fn run_forever(
   listen_addr: SocketAddr,
   handler_threads: usize,
   worker_threads: usize,
-  route_configuration: RouteConfiguration) -> Result<(), Box<std::error::Error>> {
+  route_configuration: RouteConfiguration) -> Result<(), Box<::std::error::Error>> {
 
   let threaded_server = ThreadedServer::new(
     worker_threads,
@@ -315,7 +308,7 @@ pub fn run_forever(
   for i in 0..handler_threads {
     let name = format!("handler-{}", i);
     let threaded_server_clone = threaded_server.clone();
-    let join_handle = std::thread::Builder::new().name(name).spawn(move || {
+    let join_handle = ::std::thread::Builder::new().name(name).spawn(move || {
       run_handler_thread(listen_addr, threaded_server_clone)
     })?;
     join_handles.push(join_handle);
