@@ -68,7 +68,7 @@ impl ::server::RequestHandler for StaticFileHandler {
           StatusCode::Ok,
           file_contents,
           header::ContentType(self.mime_type.clone()))
-          .with_header(header::LastModified(file_modified.into()))
+          .with_header(header::LastModified(From::from(file_modified)))
           .with_header(header::CacheControl(
              vec![header::CacheDirective::Public,
                   header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))

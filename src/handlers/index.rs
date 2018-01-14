@@ -102,7 +102,7 @@ impl ::server::RequestHandler for IndexHandler {
           StatusCode::Ok,
           Cow::from(self.index_string.clone()),
           header::ContentType::html())
-          .with_header(header::LastModified(self.creation_time.into()))
+          .with_header(header::LastModified(From::from(self.creation_time)))
           .with_header(header::CacheControl(
              vec![header::CacheDirective::Public,
                   header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))

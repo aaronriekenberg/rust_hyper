@@ -121,7 +121,7 @@ pub fn handle_not_modified(
        ::utils::system_time_in_seconds_u64(&if_modified_since) {
       return Some(
         build_response_status(StatusCode::NotModified)
-          .with_header(header::LastModified((*data_last_modified).into()))
+          .with_header(header::LastModified(From::from(*data_last_modified)))
           .with_header(header::CacheControl(
                          vec![header::CacheDirective::Public,
                               header::CacheDirective::MaxAge(cache_max_age_seconds)])));
