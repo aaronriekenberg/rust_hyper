@@ -38,19 +38,16 @@ impl CommandHandler {
 
     command.args(self.command_info.args());
 
-    let command_output =
-      match command.output() {
-        Ok(output) => {
-          let mut combined_output =
-            String::with_capacity(output.stderr.len() + output.stdout.len());
-          combined_output.push_str(&String::from_utf8_lossy(&output.stderr));
-          combined_output.push_str(&String::from_utf8_lossy(&output.stdout));
-          combined_output
-        },
-        Err(err) => format!("command error: {}", err),
-      };
-
-    command_output
+    match command.output() {
+      Ok(output) => {
+        let mut combined_output =
+          String::with_capacity(output.stderr.len() + output.stdout.len());
+        combined_output.push_str(&String::from_utf8_lossy(&output.stderr));
+        combined_output.push_str(&String::from_utf8_lossy(&output.stdout));
+        combined_output
+      },
+      Err(err) => format!("command error: {}", err),
+    }
   }
 
   fn build_pre_string(&self, command_output: String) -> String {
