@@ -44,8 +44,8 @@ fn initialize_logging() -> Result<(), fern::InitError>{
 
 fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
 
-  let executable_checksum = utils::file_sha256(executable_path)?;
-  info!("sha256 = {}", executable_checksum);
+  let executable_checksum = utils::file_sha256(&executable_path)?;
+  info!("executable_path = '{}' sha256 = {}", executable_path, executable_checksum);
 
   Ok(())
 }
