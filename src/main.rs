@@ -30,7 +30,7 @@ fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
   loop {
     let _ = match receiver.recv() {
       Ok(s) => stdout.write(s.as_bytes()),
-      Err(e) => stdout.write(format!("logging_output_thread recv error {}", e).as_bytes())
+      Err(e) => stdout.write(format!("run_logging_output_thread recv error {}\n", e).as_bytes())
     };
     let _ = stdout.flush();
   }
