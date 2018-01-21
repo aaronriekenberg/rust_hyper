@@ -14,55 +14,11 @@ extern crate tokio_core;
 
 mod config;
 mod handlers;
+mod logging;
 mod server;
 mod utils;
 
-use chrono::prelude::Local;
-
-use std::io::Write;
 use std::sync::Arc;
-use std::sync::mpsc;
-
-fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
-
-  let mut stdout = std::io::stdout();
-
-  loop {
-    match receiver.recv() {
-      Ok(s) => stdout.write(s.as_bytes()),
-      Err(e) => stdout.write(format!("run_logging_output_thread recv error {}\n", e).as_bytes())
-    }.expect("run_logging_output_thread error writing to stdout");
-    stdout.flush().expect("run_logging_output_thread error flushing stdout");
-  }
-
-}
-
-fn initialize_logging() -> Result<(), Box<std::error::Error>> {
-
-  let (sender, receiver) = mpsc::channel();
-
-  std::thread::Builder::new().name("logging_output".to_string()).spawn(move || {
-    run_logging_output_thread(receiver);
-  })?;
-
-  fern::Dispatch::new()
-    .level(log::LevelFilter::Info)
-    .format(|out, message, record| {
-      out.finish(
-        format_args!("{} [{}] {} {} - {}",
-          Local::now().format("%Y-%m-%d %H:%M:%S%.3f %z"),
-          std::thread::current().name().unwrap_or("UNKNOWN"),
-          record.level(),
-          record.target(),
-          message
-        )
-      )
-    })
-    .chain(sender)
-    .apply()?;
-
-  Ok(())
-}
 
 fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
 
@@ -103,7 +59,7 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
 }
 
 fn main() {
-  initialize_logging().expect("failed to initialize logging");
+  logging::initialize_logging().expect("failed to initialize logging");
 
   let executable_path = std::env::args().nth(0).expect("missing executable command line argument");
 

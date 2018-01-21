@@ -6,8 +6,9 @@ Using [hyper](https://crates.io/crates/hyper), [futures_cpupool](https://crates.
 
 ## Packages
 
-- main - main application - setup logging, read configuration file, create route configuration, start http server
 - config - configuration types read from yml by serde_yaml
+- logging - setup async logging
+- main - main application - read configuration file, create route configuration, start http server
 - server - http server
 - utils - utilities
 - handlers/command - http handler to execute a command and convert output from the command to html
