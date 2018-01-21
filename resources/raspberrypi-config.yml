@@ -57,10 +57,10 @@ commands:
   command: /home/pi/bin/pitemp.sh
   args: []
 
-- http_path: /tail_output
-  description: tail output
+- http_path: /tail_log
+  description: tail log
   command: tail
-  args: [-n, 20, /home/pi/rust_hyper_run/output]
+  args: [-n, 20, /home/pi/rust_hyper_run/logs/current]
 
 - http_path: /top
   description: top
