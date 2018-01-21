@@ -28,11 +28,11 @@ fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
   let mut stdout = std::io::stdout();
 
   loop {
-    let _ = match receiver.recv() {
+    match receiver.recv() {
       Ok(s) => stdout.write(s.as_bytes()),
       Err(e) => stdout.write(format!("run_logging_output_thread recv error {}\n", e).as_bytes())
-    };
-    let _ = stdout.flush();
+    }.expect("run_logging_output_thread error writing to stdout");
+    stdout.flush().expect("run_logging_output_thread error flushing stdout");
   }
 
 }
