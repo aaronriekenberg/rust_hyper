@@ -9,13 +9,31 @@ fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
 
   loop {
     match receiver.recv() {
-      Ok(s) => stdout.write(s.as_bytes()),
-      Err(e) => stdout.write(format!("run_logging_output_thread recv error {}\n", e).as_bytes())
-    }.expect("run_logging_output_thread error writing to stdout");
+      Ok(msg) => {
+        stdout.write(msg.as_bytes())
+          .expect("run_logging_output_thread error writing msg to stdout");
+        loop {
+          match receiver.try_recv() {
+            Ok(next_msg) => {
+              stdout.write(next_msg.as_bytes())
+                .expect("run_logging_output_thread error writing next_msg to stdout");
+            }
+            Err(mpsc::TryRecvError::Empty) => break,
+            Err(mpsc::TryRecvError::Disconnected) => {
+              stdout.write("run_logging_output_thread try_recv disconnected error".as_bytes())
+                .expect("run_logging_output_thread error writing to stdout");
+            }
+          }
+        }
+      },
+      Err(e) => {
+        stdout.write(format!("run_logging_output_thread recv error {}\n", e).as_bytes())
+          .expect("run_logging_output_thread error writing to stdout");
+      }
+    }
 
     stdout.flush().expect("run_logging_output_thread error flushing stdout");
   }
-
 }
 
 pub fn initialize_logging() -> Result<(), Box<::std::error::Error>> {
