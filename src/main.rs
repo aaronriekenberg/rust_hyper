@@ -19,9 +19,31 @@ mod utils;
 
 use chrono::prelude::Local;
 
+use std::io::Write;
 use std::sync::Arc;
+use std::sync::mpsc;
 
-fn initialize_logging() -> Result<(), fern::InitError>{
+fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
+
+  let mut stdout = std::io::stdout();
+
+  loop {
+    let _ = match receiver.recv() {
+      Ok(s) => stdout.write(s.as_bytes()),
+      Err(e) => stdout.write(format!("logging_output_thread recv error {}", e).as_bytes())
+    };
+    let _ = stdout.flush();
+  }
+
+}
+
+fn initialize_logging() -> Result<(), Box<std::error::Error>> {
+
+  let (sender, receiver) = mpsc::channel();
+
+  std::thread::Builder::new().name("logging_output".to_string()).spawn(move || {
+    run_logging_output_thread(receiver);
+  })?;
 
   fern::Dispatch::new()
     .level(log::LevelFilter::Info)
@@ -36,7 +58,7 @@ fn initialize_logging() -> Result<(), fern::InitError>{
         )
       )
     })
-    .chain(std::io::stdout())
+    .chain(sender)
     .apply()?;
 
   Ok(())
