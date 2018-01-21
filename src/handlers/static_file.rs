@@ -18,9 +18,9 @@ impl StaticFileHandler {
 
   pub fn new(file_path: String, mime_type: Mime, cache_max_age_seconds: u32) -> Self {
     StaticFileHandler { 
-      file_path: file_path,
-      mime_type: mime_type,
-      cache_max_age_seconds: cache_max_age_seconds
+      file_path,
+      mime_type,
+      cache_max_age_seconds
     }
   }
 

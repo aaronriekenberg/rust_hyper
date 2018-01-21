@@ -20,26 +20,30 @@ use tokio_core::net::TcpListener;
 #[derive(Debug)]
 pub struct RequestContext {
   req: Request,
-  start_time: Instant,
-  remote_addr: Option<SocketAddr>
+  remote_addr: Option<SocketAddr>,
+  start_time: Instant
 }
 
 impl RequestContext {
 
   fn new(req: Request, remote_addr: Option<SocketAddr>) -> Self {
-    RequestContext { req: req, start_time: Instant::now(), remote_addr: remote_addr }
+    RequestContext {
+      req,
+      remote_addr,
+      start_time: Instant::now()
+    }
   }
 
   pub fn req(&self) -> &Request {
     &self.req
   }
 
-  pub fn start_time(&self) -> &Instant {
-    &self.start_time
-  }
-
   pub fn remote_addr(&self) -> Option<SocketAddr> {
     self.remote_addr
+  }
+
+  pub fn start_time(&self) -> &Instant {
+    &self.start_time
   }
 
 }
@@ -66,8 +70,8 @@ impl RouteConfiguration {
     path_to_handler: RouteConfigurationHandlerMap,
     not_found_handler: RouteConfigurationHandler) -> Self {
     RouteConfiguration {
-      path_to_handler: path_to_handler,
-      not_found_handler: not_found_handler
+      path_to_handler,
+      not_found_handler
     }
   }
 
@@ -188,12 +192,15 @@ impl ThreadedServer {
       .name_prefix("worker-")
       .create();
 
-    let inner = Arc::new(InnerThreadedServer {
-      worker_pool: worker_pool,
-      route_configuration: route_configuration
-    });
-
-    ThreadedServer { inner: inner, remote_addr: None }
+    ThreadedServer {
+      inner: Arc::new(
+        InnerThreadedServer {
+          worker_pool,
+          route_configuration,
+        }
+      ),
+      remote_addr: None
+    }
   }
 
   fn clone_with_remote_addr(&self, remote_addr: SocketAddr) -> Self {

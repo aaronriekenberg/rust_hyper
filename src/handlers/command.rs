@@ -29,7 +29,10 @@ impl CommandHandler {
       command_line_string.push_str(arg);
     }
 
-    CommandHandler { command_info: command_info, command_line_string: command_line_string }
+    CommandHandler {
+      command_info,
+      command_line_string
+    }
   }
 
   fn run_command(&self) -> String {

@@ -75,11 +75,13 @@ impl IndexHandler {
       }
     }.into_string()?;
 
-    Ok(IndexHandler { 
-      index_string: s,
-      creation_time: now,
-      cache_max_age_seconds: config.main_page_info().cache_max_age_seconds()
-    })
+    Ok(
+      IndexHandler {
+        index_string: s,
+        creation_time: now,
+        cache_max_age_seconds: config.main_page_info().cache_max_age_seconds()
+      }
+    )
   }
 
 }
