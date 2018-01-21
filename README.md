@@ -23,7 +23,7 @@ Using [hyper](https://crates.io/crates/hyper), [futures_cpupool](https://crates.
 
 Handler threads accept new incoming connections and do all network I/O.  This is all asynchronous thanks to Tokio and Hyper.
 
-Each handler thread binds a listening TCP socket to accept incoming connections using SO_REUSEPORT for load balancing across handler threads.
+Each handler thread binds a listening TCP socket to accept incoming connections using SO_REUSEPORT for load balancing.
 
 ### Worker Threads
 
