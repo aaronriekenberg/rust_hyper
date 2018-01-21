@@ -21,7 +21,7 @@ Using [hyper](https://crates.io/crates/hyper), [futures_cpupool](https://crates.
 
 1 to N handler threads each run a Tokio Core event loop and a Hyper HTTP server.  
 
-Handler threads accept new incoming connections and do all network I/O.
+Handler threads accept new incoming connections and do all network I/O.  This is all asynchronous thanks to Tokio and Hyper.
 
 Each handler thread binds a listening TCP socket to accept incoming connections using SO_REUSEPORT for load balancing across handler threads.
 
