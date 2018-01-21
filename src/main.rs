@@ -97,8 +97,8 @@ fn main() {
   let route_configuration = build_route_configuration(&config).expect("failed to build route_configuration");
 
   server::run_forever(
-   listen_addr,
-   config.handler_threads(),
-   config.worker_threads(),
-   route_configuration).expect("server::run_forever failed");
+    listen_addr,
+    config.handler_threads(),
+    config.worker_threads(),
+    route_configuration).expect("server::run_forever failed");
 }
