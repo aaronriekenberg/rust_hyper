@@ -22,8 +22,11 @@ use std::sync::Arc;
 
 fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
 
-  let executable_checksum = utils::file_sha256(&executable_path)?;
-  info!("executable_path = '{}' sha256 = {}", executable_path, executable_checksum);
+  info!("executable_path = '{}'", executable_path);
+
+  let checksum = utils::file_sha256(&executable_path)?;
+
+  info!("sha256 = {}", checksum);
 
   Ok(())
 }
