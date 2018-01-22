@@ -21,9 +21,9 @@ fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
 
   loop {
     match receiver.recv() {
-      Ok(msg) => {
-        stdout.write(msg.as_bytes())
-          .expect("run_logging_output_thread error writing msg to stdout");
+      Ok(first_msg) => {
+        stdout.write(first_msg.as_bytes())
+          .expect("run_logging_output_thread error writing first_msg to stdout");
         loop {
           match receiver.try_recv() {
             Ok(next_msg) => {
