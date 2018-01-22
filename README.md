@@ -33,3 +33,9 @@ Pool of 1 to N worker threads exist in a futures_cpupool::CpuPool.
 Request handlers can request that they are invoked in a worker thread by returning true for use_worker_threadpool().
 
 Using worker threads is done for request handers that do file I/O (handlers/static_file) or execute and await the results of commands (handlers/command).  This keeps handler threads free to do network I/O and handle new incoming connections.
+
+### Logging Thread
+
+[fern](https://crates.io/crates/fern) is used to perform logging and sends all logs using an mpsc sender.
+
+1 thread listens to an mpsc receiver to write log messages to stdout.
