@@ -17,7 +17,7 @@ fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
             Ok(next_msg) => {
               stdout.write(next_msg.as_bytes())
                 .expect("run_logging_output_thread error writing next_msg to stdout");
-            }
+            },
             Err(mpsc::TryRecvError::Empty) => break,
             Err(mpsc::TryRecvError::Disconnected) => {
               stdout.write("run_logging_output_thread try_recv disconnected error".as_bytes())
