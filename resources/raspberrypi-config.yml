@@ -32,6 +32,16 @@ commands:
   command: /sbin/iwconfig
   args: []
 
+- http_path: /log_ls
+  description: log ls
+  command: ls
+  args: [-latrh, /home/pi/rust_hyper_run/logs/]
+
+- http_path: /log_tail
+  description: log tail
+  command: tail
+  args: [-n, 30, /home/pi/rust_hyper_run/logs/current]
+
 - http_path: /lscpu
   description: lscpu
   command: lscpu
@@ -56,11 +66,6 @@ commands:
   description: pitemp
   command: /home/pi/bin/pitemp.sh
   args: []
-
-- http_path: /tail_log
-  description: tail log
-  command: tail
-  args: [-n, 20, /home/pi/rust_hyper_run/logs/current]
 
 - http_path: /top
   description: top
