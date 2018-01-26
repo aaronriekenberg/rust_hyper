@@ -38,8 +38,8 @@ impl RequestContext {
     &self.req
   }
 
-  pub fn remote_addr(&self) -> Option<SocketAddr> {
-    self.remote_addr
+  pub fn remote_addr(&self) -> Option<&SocketAddr> {
+    self.remote_addr.as_ref()
   }
 
   pub fn start_time(&self) -> &Instant {
