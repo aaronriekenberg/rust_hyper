@@ -5,7 +5,7 @@ use std::sync::mpsc;
 
 fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
 
-  let _exit_on_drop = ::utils::ExitOnDrop::new(None);
+  let _exit_on_drop = ::utils::ExitOnDropBuilder::new().build();
 
   let mut stdout = ::std::io::stdout();
 

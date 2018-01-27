@@ -58,16 +58,6 @@ pub struct ExitOnDrop {
   sleep_time_option: Option<::std::time::Duration>
 }
 
-impl ExitOnDrop {
-
-  pub fn new(sleep_time_option: Option<::std::time::Duration>) -> Self {
-    ExitOnDrop {
-      sleep_time_option
-    }
-  }
-
-}
-
 impl Drop for ExitOnDrop {
 
   fn drop(&mut self) {
@@ -79,6 +69,31 @@ impl Drop for ExitOnDrop {
     }
 
     ::std::process::exit(1);
+  }
+
+}
+
+pub struct ExitOnDropBuilder {
+  sleep_time_option: Option<::std::time::Duration>
+}
+
+impl ExitOnDropBuilder {
+
+  pub fn new() -> Self {
+    ExitOnDropBuilder {
+      sleep_time_option: None
+    }
+  }
+
+  pub fn sleep_time(mut self, sleep_time: ::std::time::Duration) -> Self {
+    self.sleep_time_option = Some(sleep_time);
+    self
+  }
+
+  pub fn build(self) -> ExitOnDrop {
+    ExitOnDrop {
+      sleep_time_option: self.sleep_time_option
+    }
   }
 
 }
