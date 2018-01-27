@@ -265,6 +265,9 @@ fn run_handler_thread(
   listen_addr: SocketAddr,
   threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error + Send + Sync>> {
 
+  let _exit_on_drop = ::utils::ExitOnDrop::new(
+    Some(::std::time::Duration::from_secs(1)));
+
   let mut core = Core::new()?;
 
   let handle = core.handle();
@@ -295,9 +298,7 @@ fn run_handler_thread(
 
   core.run(listener_future)?;
 
-  error!("core.run returned in handler thread");
-
-  Err(From::from("core.run returned in handler thread"))
+  Err(From::from("handler thread exiting"))
 }
 
 pub fn run_forever(

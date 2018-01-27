@@ -3,19 +3,9 @@ use chrono::prelude::Local;
 use std::io::Write;
 use std::sync::mpsc;
 
-struct ExitOnDrop;
-
-impl Drop for ExitOnDrop {
-
-  fn drop(&mut self) {
-    ::std::process::exit(1);
-  }
-
-}
-
 fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
 
-  let _exit_on_drop = ExitOnDrop;
+  let _exit_on_drop = ::utils::ExitOnDrop::new(None);
 
   let mut stdout = ::std::io::stdout();
 

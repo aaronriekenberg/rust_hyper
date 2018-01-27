@@ -53,3 +53,32 @@ pub fn file_sha256(path: &str) -> Result<String, ::std::io::Error> {
 
   Ok(hasher.result_str())
 }
+
+pub struct ExitOnDrop {
+  sleep_time_option: Option<::std::time::Duration>
+}
+
+impl ExitOnDrop {
+
+  pub fn new(sleep_time_option: Option<::std::time::Duration>) -> Self {
+    ExitOnDrop {
+      sleep_time_option
+    }
+  }
+
+}
+
+impl Drop for ExitOnDrop {
+
+  fn drop(&mut self) {
+
+    error!("in ExitOnDrop::drop");
+
+    if let Some(sleep_time) = self.sleep_time_option {
+      ::std::thread::sleep(sleep_time)
+    }
+
+    ::std::process::exit(1);
+  }
+
+}
