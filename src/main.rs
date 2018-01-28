@@ -20,6 +20,16 @@ mod utils;
 
 use std::sync::Arc;
 
+fn install_panic_hook() {
+
+  let original_panic_hook = std::panic::take_hook();
+
+  std::panic::set_hook(Box::new(move |panic_info| {
+    original_panic_hook(panic_info);
+    std::process::exit(1);
+  }));
+}
+
 fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
 
   info!("executable_path = '{}'", executable_path);
@@ -62,6 +72,9 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
 }
 
 fn main() {
+
+  install_panic_hook();
+
   logging::initialize_logging().expect("failed to initialize logging");
 
   let executable_path = std::env::args().nth(0).expect("missing executable command line argument");

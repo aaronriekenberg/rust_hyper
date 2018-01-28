@@ -265,10 +265,6 @@ fn run_handler_thread(
   listen_addr: SocketAddr,
   threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error + Send + Sync>> {
 
-  let _exit_on_drop = ::utils::ExitOnDropBuilder::new()
-    .sleep_time(::std::time::Duration::from_secs(1))
-    .build();
-
   let mut core = Core::new()?;
 
   let handle = core.handle();
