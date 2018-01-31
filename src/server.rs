@@ -325,8 +325,10 @@ pub fn run_forever(
         worker_threads);
 
   for join_handle in join_handles {
-    let result = join_handle.join();
-    return Err(From::from(format!("join_handle.join returned unexpectedly result = {:?}", result)));
+    return match join_handle.join() {
+      Err(e) => Err(From::from(format!("handler thread paniced message = {:?}", e))),
+      Ok(r) => Err(From::from(format!("handler thread exited result = {:?}", r)))
+    }
   }
 
   Err(From::from("run_forever returning"))
