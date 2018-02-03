@@ -17,6 +17,11 @@ commands:
   command: /usr/sbin/arp
   args: [-a, -n]
 
+- http_path: /dhcp-lease-list
+  description: dhcp lease list
+  command: /usr/sbin/dhcp-lease-list
+  args: []
+
 - http_path: /dmesg
   description: dmesg
   command: dmesg
