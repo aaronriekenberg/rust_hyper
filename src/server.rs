@@ -261,7 +261,7 @@ impl ::hyper::server::Service for ThreadedServer {
 
 }
 
-fn run_handler_thread(
+fn run_io_thread(
   listen_addr: SocketAddr,
   threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error + Send + Sync>> {
 
@@ -278,7 +278,7 @@ fn run_handler_thread(
 
   let http = ::hyper::server::Http::<::hyper::Chunk>::new();
 
-  info!("started handler thread");
+  info!("started io thread");
 
   let listener_future = tcp_listener.incoming()
     .for_each(move |(socket, remote_addr)| {
@@ -295,12 +295,12 @@ fn run_handler_thread(
 
   core.run(listener_future)?;
 
-  Err(From::from("handler thread exiting"))
+  Err(From::from("io thread exiting"))
 }
 
 pub fn run_forever(
   listen_addr: SocketAddr,
-  handler_threads: usize,
+  io_threads: usize,
   worker_threads: usize,
   route_configuration: RouteConfiguration) -> Result<(), Box<::std::error::Error>> {
 
@@ -308,26 +308,26 @@ pub fn run_forever(
     worker_threads,
     route_configuration);
 
-  let mut join_handles = Vec::with_capacity(handler_threads);
+  let mut join_handles = Vec::with_capacity(io_threads);
 
-  for i in 0..handler_threads {
-    let name = format!("handler-{}", i);
+  for i in 0..io_threads {
+    let name = format!("io-{}", i);
     let threaded_server_clone = threaded_server.clone();
     let join_handle = ::std::thread::Builder::new().name(name).spawn(move || {
-      run_handler_thread(listen_addr, threaded_server_clone)
+      run_io_thread(listen_addr, threaded_server_clone)
     })?;
     join_handles.push(join_handle);
   }
 
-  info!("Listening on http://{} handler_threads={} worker_threads={}",
+  info!("Listening on http://{} io_threads={} worker_threads={}",
         listen_addr,
-        handler_threads,
+        io_threads,
         worker_threads);
 
   for join_handle in join_handles {
     return match join_handle.join() {
-      Err(e) => Err(From::from(format!("handler thread paniced message = {:?}", e))),
-      Ok(r) => Err(From::from(format!("handler thread exited result = {:?}", r)))
+      Err(e) => Err(From::from(format!("io thread paniced message = {:?}", e))),
+      Ok(r) => Err(From::from(format!("io thread exited result = {:?}", r)))
     }
   }
 

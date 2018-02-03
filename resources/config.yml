@@ -1,6 +1,6 @@
 listen_address: 127.0.0.1:8080
 
-handler_threads: 4
+io_threads: 4
 
 worker_threads: 8
 

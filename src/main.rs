@@ -92,7 +92,7 @@ fn main() {
 
   server::run_forever(
     listen_addr,
-    config.handler_threads(),
+    config.io_threads(),
     config.worker_threads(),
     route_configuration).expect("server::run_forever failed");
 }
