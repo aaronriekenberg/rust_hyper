@@ -50,7 +50,7 @@ impl RequestContext {
 
 pub trait RequestHandler : Send + Sync {
 
-  fn use_worker_threadpool(&self) -> bool;
+  fn use_worker_threadpool(&self) -> bool { false }
 
   fn handle(&self, req_context: &RequestContext) -> Response;
 

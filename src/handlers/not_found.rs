@@ -8,8 +8,6 @@ pub struct NotFoundHandler;
 
 impl ::server::RequestHandler for NotFoundHandler {
 
-  fn use_worker_threadpool(&self) -> bool { false }
-
   fn handle(&self, _: &::server::RequestContext) -> Response {
 
     ::server::build_response_string(
