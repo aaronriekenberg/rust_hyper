@@ -118,7 +118,7 @@ pub fn handle_not_modified(
   data_last_modified: &SystemTime,
   cache_max_age_seconds: u32) -> Option<Response> {
 
-  if let Some(if_modified_since_header) =
+  if let Some(ref if_modified_since_header) =
      req_context.req().headers().get::<header::IfModifiedSince>() {
     let if_modified_since = SystemTime::from(if_modified_since_header.0);
     if ::utils::system_time_in_seconds_u64(&data_last_modified) <=
