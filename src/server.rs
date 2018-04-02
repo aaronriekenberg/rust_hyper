@@ -142,7 +142,7 @@ pub fn log_request_and_response(
   let req = req_context.req();
 
   let remote_addr = match req_context.remote_addr() {
-    Some(remote_addr) => Cow::from(remote_addr.to_string()),
+    Some(ref remote_addr) => Cow::from(remote_addr.to_string()),
     None => Cow::from("")
   };
 
@@ -155,7 +155,7 @@ pub fn log_request_and_response(
   let response_status = resp.status().as_u16().to_string();
 
   let content_length = match resp.headers().get::<header::ContentLength>() {
-    Some(content_length_header) => Cow::from(content_length_header.0.to_string()),
+    Some(ref content_length_header) => Cow::from(content_length_header.0.to_string()),
     None => Cow::from("0")
   };
 
@@ -326,7 +326,7 @@ pub fn run_forever(
 
   for join_handle in join_handles {
     return match join_handle.join() {
-      Err(e) => Err(From::from(format!("io thread paniced message = {:?}", e))),
+      Err(ref e) => Err(From::from(format!("io thread paniced message = {:?}", e))),
       Ok(r) => Err(From::from(format!("io thread exited result = {:?}", r)))
     }
   }
