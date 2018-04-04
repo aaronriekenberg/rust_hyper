@@ -163,7 +163,7 @@ pub fn handle_not_modified(
   None
 }
 
-pub fn log_request_and_response(
+fn log_request_and_response(
   req_context: &RequestContext,
   resp: &Response) {
 
