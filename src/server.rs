@@ -56,6 +56,34 @@ pub trait RequestHandler : Send + Sync {
 
 }
 
+#[derive(Debug)]
+pub struct ThreadConfiguration {
+  io_threads: usize,
+  worker_threads: usize
+}
+
+impl ThreadConfiguration {
+
+  pub fn new(
+    io_threads: usize,
+    worker_threads: usize) -> Self {
+
+    ThreadConfiguration {
+      io_threads,
+      worker_threads
+    }
+  }
+
+  pub fn io_threads(&self) -> usize {
+    self.io_threads
+  }
+
+  pub fn worker_threads(&self) -> usize {
+    self.worker_threads
+  }
+
+}
+
 pub type RouteConfigurationHandler = Arc<RequestHandler>;
 pub type RouteConfigurationHandlerMap = HashMap<String, RouteConfigurationHandler>;
 
@@ -300,17 +328,16 @@ fn run_io_thread(
 
 pub fn run_forever(
   listen_addr: SocketAddr,
-  io_threads: usize,
-  worker_threads: usize,
+  thread_configuration: ThreadConfiguration,
   route_configuration: RouteConfiguration) -> Result<(), Box<::std::error::Error>> {
 
   let threaded_server = ThreadedServer::new(
-    worker_threads,
+    thread_configuration.worker_threads(),
     route_configuration);
 
-  let mut join_handles = Vec::with_capacity(io_threads);
+  let mut join_handles = Vec::with_capacity(thread_configuration.io_threads());
 
-  for i in 0..io_threads {
+  for i in 0..thread_configuration.io_threads() {
     let name = format!("io-{}", i);
     let threaded_server_clone = threaded_server.clone();
     let join_handle = ::std::thread::Builder::new().name(name).spawn(move || {
@@ -319,10 +346,8 @@ pub fn run_forever(
     join_handles.push(join_handle);
   }
 
-  info!("Listening on http://{} io_threads={} worker_threads={}",
-        listen_addr,
-        io_threads,
-        worker_threads);
+  info!("Listening on http://{}", listen_addr);
+  info!("thread_configuration = {:#?}", thread_configuration);
 
   for join_handle in join_handles {
     return match join_handle.join() {

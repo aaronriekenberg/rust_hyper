@@ -41,6 +41,15 @@ fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
   Ok(())
 }
 
+fn build_thread_configuration(config: &config::Configuration) -> server::ThreadConfiguration {
+
+  server::ThreadConfiguration::new(
+    config.io_threads(),
+    config.worker_threads()
+  )
+
+}
+
 fn build_route_configuration(config: &config::Configuration) -> Result<server::RouteConfiguration, Box<std::error::Error>> {
 
   let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
@@ -88,11 +97,12 @@ fn main() {
 
   let listen_addr = config.listen_address().parse().expect("invalid listen_address");
 
+  let thread_configuration = build_thread_configuration(&config);
+
   let route_configuration = build_route_configuration(&config).expect("failed to build route_configuration");
 
   server::run_forever(
     listen_addr,
-    config.io_threads(),
-    config.worker_threads(),
+    thread_configuration,
     route_configuration).expect("server::run_forever failed");
 }
