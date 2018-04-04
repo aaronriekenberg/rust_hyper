@@ -224,7 +224,7 @@ impl ThreadedServer {
       inner: Arc::new(
         InnerThreadedServer {
           worker_pool,
-          route_configuration,
+          route_configuration
         }
       ),
       remote_addr: None
