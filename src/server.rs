@@ -289,6 +289,7 @@ fn run_event_loop(
   let handle = core.handle();
 
   let net2_listener = ::net2::TcpBuilder::new_v4()?
+    .reuse_address(true)?
     .bind(listen_addr)?
     .listen(128)?;
 
