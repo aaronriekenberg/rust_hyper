@@ -53,10 +53,15 @@ commands:
   command: ncal
   args: [-h, -y]
 
-- http_path: /netstat
-  description: netstat
+- http_path: /netstat_an
+  description: netstat -an
   command: netstat
   args: [-a, -n]
+
+- http_path: /netstat_s
+  description: netstat -s
+  command: netstat
+  args: [-s]
 
 - http_path: /ntpq
   description: ntpq
