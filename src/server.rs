@@ -6,8 +6,6 @@ use hyper::header;
 use hyper::server::{Request, Response};
 use hyper::StatusCode;
 
-use net2::unix::UnixTcpBuilderExt;
-
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -58,24 +56,17 @@ pub trait RequestHandler : Send + Sync {
 
 #[derive(Debug)]
 pub struct ThreadConfiguration {
-  io_threads: usize,
   worker_threads: usize
 }
 
 impl ThreadConfiguration {
 
   pub fn new(
-    io_threads: usize,
     worker_threads: usize) -> Self {
 
     ThreadConfiguration {
-      io_threads,
       worker_threads
     }
-  }
-
-  pub fn io_threads(&self) -> usize {
-    self.io_threads
   }
 
   pub fn worker_threads(&self) -> usize {
@@ -289,16 +280,15 @@ impl ::hyper::server::Service for ThreadedServer {
 
 }
 
-fn run_io_thread(
+fn run_event_loop(
   listen_addr: SocketAddr,
-  threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error + Send + Sync>> {
+  threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error>> {
 
   let mut core = Core::new()?;
 
   let handle = core.handle();
 
   let net2_listener = ::net2::TcpBuilder::new_v4()?
-    .reuse_port(true)?
     .bind(listen_addr)?
     .listen(128)?;
 
@@ -306,7 +296,7 @@ fn run_io_thread(
 
   let http = ::hyper::server::Http::<::hyper::Chunk>::new();
 
-  info!("started io thread");
+  info!("Listening on http://{}", listen_addr);
 
   let listener_future = tcp_listener.incoming()
     .for_each(move |(socket, remote_addr)| {
@@ -323,7 +313,7 @@ fn run_io_thread(
 
   core.run(listener_future)?;
 
-  Err(From::from("io thread exiting"))
+  Err(From::from("run_event_loop exiting"))
 }
 
 pub fn run_forever(
@@ -335,26 +325,7 @@ pub fn run_forever(
     thread_configuration.worker_threads(),
     route_configuration);
 
-  let mut join_handles = Vec::with_capacity(thread_configuration.io_threads());
-
-  for i in 0..thread_configuration.io_threads() {
-    let name = format!("io-{}", i);
-    let threaded_server_clone = threaded_server.clone();
-    let join_handle = ::std::thread::Builder::new().name(name).spawn(move || {
-      run_io_thread(listen_addr, threaded_server_clone)
-    })?;
-    join_handles.push(join_handle);
-  }
-
-  info!("Listening on http://{}", listen_addr);
   info!("thread_configuration = {:#?}", thread_configuration);
 
-  for join_handle in join_handles {
-    return match join_handle.join() {
-      Err(ref e) => Err(From::from(format!("io thread paniced message = {:?}", e))),
-      Ok(r) => Err(From::from(format!("io thread exited result = {:?}", r)))
-    }
-  }
-
-  Err(From::from("run_forever returning"))
+  run_event_loop(listen_addr, threaded_server)
 }

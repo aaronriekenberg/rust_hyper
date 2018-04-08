@@ -44,7 +44,6 @@ fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
 fn build_thread_configuration(config: &config::Configuration) -> server::ThreadConfiguration {
 
   server::ThreadConfiguration::new(
-    config.io_threads(),
     config.worker_threads()
   )
 
