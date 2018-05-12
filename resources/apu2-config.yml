@@ -1,0 +1,112 @@
+listen_address: 0.0.0.0:8080
+
+worker_threads: 8
+
+main_page_info:
+  title: Aaron's APU2
+  cache_max_age_seconds: 60
+
+commands:
+
+- http_path: /arp
+  description: arp
+  command: /usr/sbin/arp
+  args: [-a, -n]
+
+- http_path: /dhcp-lease-list
+  description: dhcp lease list
+  command: /home/aaron/rust-dhcp-leases/target/release/rust-dhcp-leases
+  args: []
+
+- http_path: /dmesg
+  description: dmesg
+  command: dmesg
+  args: []
+
+- http_path: /ifconfig
+  description: ifconfig
+  command: /sbin/ifconfig
+  args: []
+
+- http_path: /iwconfig
+  description: iwconfig
+  command: /sbin/iwconfig
+  args: []
+
+- http_path: /log_ls
+  description: log ls
+  command: ls
+  args: [-latrh, /home/aaron/rust_hyper_run/logs/]
+
+- http_path: /log_tail
+  description: log tail
+  command: tail
+  args: [-n, 30, /home/aaron/rust_hyper_run/logs/current]
+
+- http_path: /lscpu
+  description: lscpu
+  command: lscpu
+  args: []
+
+- http_path: /ncal
+  description: ncal
+  command: ncal
+  args: [-h, -y]
+
+- http_path: /netstat_an
+  description: netstat -an
+  command: netstat
+  args: [-a, -n]
+
+- http_path: /netstat_s
+  description: netstat -s
+  command: netstat
+  args: [-s]
+
+- http_path: /ntpq
+  description: ntpq
+  command: ntpq
+  args: [-p]
+
+- http_path: /sensors
+  description: sensors
+  command: sensors
+  args: []
+
+- http_path: /top
+  description: top
+  command: top
+  args: [-b, -n1]
+
+- http_path: /unbound_infra
+  description: unbound infra
+  command: sudo
+  args: [/usr/sbin/unbound-control, dump_infra]
+
+- http_path: /unbound_stats
+  description: unbound stats
+  command: sudo
+  args: [/usr/sbin/unbound-control, stats_noreset]
+
+- http_path: /uptime
+  description: uptime
+  command: uptime
+  args: []
+
+- http_path: /vmstat
+  description: vmstat
+  command: vmstat
+  args: []
+
+- http_path: /w
+  description: w
+  command: w
+  args: []
+
+static_paths:
+
+- http_path: /style.css
+  fs_path: style.css
+  content_type: text/css
+  cache_max_age_seconds: 60
+  include_in_main_page: false

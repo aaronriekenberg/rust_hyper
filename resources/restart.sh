@@ -1,7 +1,7 @@
 #!/bin/sh -x
 
-CONFIG_FILE=raspberrypi-config.yml
+CONFIG_FILE=$(hostname)-config.yml
 
-killall rust_hyper
+pkill rust_hyper
 
 nohup ./rust_hyper $CONFIG_FILE 2>&1 | svlogd logs &
