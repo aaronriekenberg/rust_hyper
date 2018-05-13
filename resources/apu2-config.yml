@@ -28,11 +28,6 @@ commands:
   command: /sbin/ifconfig
   args: []
 
-- http_path: /iwconfig
-  description: iwconfig
-  command: /sbin/iwconfig
-  args: []
-
 - http_path: /log_ls
   description: log ls
   command: ls
