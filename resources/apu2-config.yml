@@ -20,8 +20,8 @@ commands:
 
 - http_path: /dmesg
   description: dmesg
-  command: dmesg
-  args: []
+  command: sudo
+  args: [dmesg]
 
 - http_path: /ifconfig
   description: ifconfig
