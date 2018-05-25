@@ -109,7 +109,7 @@ static_paths:
   include_in_main_page: false
 
 - http_path: /vnstat.html
-  fs_path: /home/aaron/vnstat/vnstat.html
+  fs_path: /home/aaron/vnstat/index.html
   content_type: text/html
   cache_max_age_seconds: 60
   include_in_main_page: true
