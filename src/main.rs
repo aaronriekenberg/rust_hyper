@@ -7,7 +7,6 @@ extern crate futures;
 extern crate futures_cpupool;
 #[macro_use] extern crate log;
 extern crate mime;
-extern crate net2;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
 extern crate tokio_core;
@@ -44,6 +43,7 @@ fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
 fn build_thread_configuration(config: &config::Configuration) -> server::ThreadConfiguration {
 
   server::ThreadConfiguration::new(
+    config.server_threads(),
     config.worker_threads()
   )
 

@@ -1,9 +1,9 @@
-use futures::{Future, Stream};
+use futures::Future;
 
 use futures_cpupool::CpuPool;
 
 use hyper::header;
-use hyper::server::{Request, Response};
+use hyper::server::{Http, Request, Response};
 use hyper::StatusCode;
 
 use std::borrow::Cow;
@@ -12,32 +12,23 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::{Instant, SystemTime};
 
-use tokio_core::reactor::Core;
-use tokio_core::net::TcpListener;
-
 #[derive(Debug)]
 pub struct RequestContext {
   req: Request,
-  remote_addr: Option<SocketAddr>,
   start_time: Instant
 }
 
 impl RequestContext {
 
-  fn new(req: Request, remote_addr: Option<SocketAddr>) -> Self {
+  fn new(req: Request) -> Self {
     RequestContext {
       req,
-      remote_addr,
       start_time: Instant::now()
     }
   }
 
   pub fn req(&self) -> &Request {
     &self.req
-  }
-
-  pub fn remote_addr(&self) -> Option<&SocketAddr> {
-    self.remote_addr.as_ref()
   }
 
   pub fn start_time(&self) -> &Instant {
@@ -56,17 +47,24 @@ pub trait RequestHandler : Send + Sync {
 
 #[derive(Debug)]
 pub struct ThreadConfiguration {
+  server_threads: usize,
   worker_threads: usize
 }
 
 impl ThreadConfiguration {
 
   pub fn new(
+    server_threads: usize,
     worker_threads: usize) -> Self {
 
     ThreadConfiguration {
+      server_threads,
       worker_threads
     }
+  }
+
+  pub fn server_threads(&self) -> usize {
+    self.server_threads
   }
 
   pub fn worker_threads(&self) -> usize {
@@ -160,7 +158,7 @@ fn log_request_and_response(
 
   let req = req_context.req();
 
-  let remote_addr = match req_context.remote_addr() {
+  let remote_addr = match req.remote_addr() {
     Some(ref remote_addr) => Cow::from(remote_addr.to_string()),
     None => Cow::from("")
   };
@@ -196,8 +194,7 @@ type ThreadedServerFuture = Box<Future<Item = ::hyper::Response, Error = ::hyper
 
 #[derive(Clone)]
 struct ThreadedServer {
-  inner: Arc<InnerThreadedServer>,
-  remote_addr: Option<SocketAddr>
+  inner: Arc<InnerThreadedServer>
 }
 
 impl ThreadedServer {
@@ -217,16 +214,7 @@ impl ThreadedServer {
           worker_pool,
           route_configuration
         }
-      ),
-      remote_addr: None
-    }
-  }
-
-  fn clone_with_remote_addr(&self, remote_addr: SocketAddr) -> Self {
-
-    ThreadedServer {
-      inner: Arc::clone(&self.inner),
-      remote_addr: Some(remote_addr)
+      )
     }
   }
 
@@ -252,7 +240,7 @@ impl ::hyper::server::Service for ThreadedServer {
 
   fn call(&self, req: Request) -> Self::Future {
 
-    let req_context = RequestContext::new(req, self.remote_addr);
+    let req_context = RequestContext::new(req);
 
     let route_configuration = &self.inner.route_configuration;
 
@@ -280,41 +268,18 @@ impl ::hyper::server::Service for ThreadedServer {
 
 }
 
-fn run_event_loop(
+fn run_server(
   listen_addr: SocketAddr,
+  server_threads: usize,
   threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error>> {
 
-  let mut core = Core::new()?;
-
-  let handle = core.handle();
-
-  let net2_listener = ::net2::TcpBuilder::new_v4()?
-    .reuse_address(true)?
-    .bind(listen_addr)?
-    .listen(128)?;
-
-  let tcp_listener = TcpListener::from_listener(net2_listener, &listen_addr, &handle)?;
-
-  let http = ::hyper::server::Http::<::hyper::Chunk>::new();
+  let server = Http::new().bind(&listen_addr, move || Ok(threaded_server.clone()))?;
 
   info!("Listening on http://{}", listen_addr);
 
-  let listener_future = tcp_listener.incoming()
-    .for_each(move |(socket, remote_addr)| {
-      if let Ok(_) = socket.set_nodelay(true) {
-        let connection_future = http.serve_connection(
-          socket,
-          threaded_server.clone_with_remote_addr(remote_addr))
-          .map(|_| ())
-          .map_err(move |err| error!("server connection error: ({}) {}", remote_addr, err));
-        handle.spawn(connection_future);
-      }
-      Ok(())
-  });
+  server.run_threads(server_threads);
 
-  core.run(listener_future)?;
-
-  Err(From::from("run_event_loop exiting"))
+  Err(From::from("run_server exiting"))
 }
 
 pub fn run_forever(
@@ -328,5 +293,5 @@ pub fn run_forever(
 
   info!("thread_configuration = {:#?}", thread_configuration);
 
-  run_event_loop(listen_addr, threaded_server)
+  run_server(listen_addr, thread_configuration.server_threads(), threaded_server)
 }

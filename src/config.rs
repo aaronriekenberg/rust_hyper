@@ -82,6 +82,7 @@ impl MainPageInfo {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Configuration {
   listen_address: String,
+  server_threads: usize,
   worker_threads: usize,
   main_page_info: MainPageInfo,
   commands: Vec<CommandInfo>,
@@ -92,6 +93,10 @@ impl Configuration {
 
   pub fn listen_address(&self) -> &String {
     &self.listen_address
+  }
+
+  pub fn server_threads(&self) -> usize {
+    self.server_threads
   }
 
   pub fn worker_threads(&self) -> usize {
