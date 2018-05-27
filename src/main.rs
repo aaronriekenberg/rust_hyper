@@ -1,5 +1,4 @@
 extern crate chrono;
-extern crate crypto;
 extern crate hyper;
 #[macro_use] extern crate horrorshow;
 extern crate fern;
@@ -26,17 +25,6 @@ fn install_panic_hook() {
     original_panic_hook(panic_info);
     std::process::exit(1);
   }));
-}
-
-fn log_executable_info(executable_path: String) -> Result<(), std::io::Error> {
-
-  info!("executable_path = '{}'", executable_path);
-
-  let checksum = utils::file_sha256(&executable_path)?;
-
-  info!("sha256 = {}", checksum);
-
-  Ok(())
 }
 
 fn build_thread_configuration(config: &config::Configuration) -> server::ThreadConfiguration {
@@ -85,8 +73,7 @@ fn main() {
   logging::initialize_logging().expect("failed to initialize logging");
 
   let executable_path = std::env::args().nth(0).expect("missing executable command line argument");
-
-  log_executable_info(executable_path).expect("failed to log executable info");
+  info!("executable_path = '{}'", executable_path);
 
   let config_file = std::env::args().nth(1).expect("config file required as command line argument");
 
