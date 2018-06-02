@@ -11,7 +11,7 @@ impl ::server::RequestHandler for NotFoundHandler {
     ::server::build_response_string(
       StatusCode::NOT_FOUND,
       Cow::from("Route not found"),
-      Cow::from("text/plain"))
+      "text/plain")
       //.with_header(header::CacheControl(
       //               vec![header::CacheDirective::MaxAge(0)]))
 

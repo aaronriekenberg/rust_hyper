@@ -99,7 +99,7 @@ impl ::server::RequestHandler for IndexHandler {
         ::server::build_response_string(
           StatusCode::OK,
           Cow::from(self.index_string.clone()),
-          Cow::from("text/html"))
+          "text/html")
           //.with_header(header::LastModified(From::from(self.creation_time)))
           //.with_header(header::CacheControl(
           //   vec![header::CacheDirective::Public,

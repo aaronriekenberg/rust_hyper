@@ -101,19 +101,16 @@ pub fn build_response_status(
     .status(status_code)
     .body(Body::empty())
     .unwrap()
-  // XXX
 }
 
 pub fn build_response_string(
   status_code: StatusCode,
   body: Cow<'static, str>,
-  content_type: Cow<'static, str>) -> Response<Body> {
+  content_type: &'static str) -> Response<Body> {
   Response::builder()
     .status(status_code)
-    // XXX
-    .header("Content-Type", HeaderValue::from_str(&content_type).unwrap())
+    .header("Content-Type", content_type)
     .body(From::from(body))
-    // XXX
     .unwrap()
 }
 
@@ -123,11 +120,9 @@ pub fn build_response_vec(
   content_type: Cow<'static, str>) -> Response<Body> {
   Response::builder()
     .status(status_code)
-    // XXX
     .header("Content-Type", HeaderValue::from_str(&content_type).unwrap())
     .body(From::from(body))
     .unwrap()
-  // XXX
 }
 
 pub fn handle_not_modified(
