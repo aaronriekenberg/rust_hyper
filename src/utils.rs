@@ -18,15 +18,6 @@ pub fn system_time_to_local(st: &SystemTime) -> DateTime<Local> {
   }
 }
 
-pub fn system_time_in_seconds_u64(st: &SystemTime) -> u64 {
-  match st.duration_since(UNIX_EPOCH) {
-    Ok(dur) => {
-      dur.as_secs()
-    },
-    Err(_) => 0
-  }
-}
-
 pub fn duration_in_seconds_f64(duration: &Duration) -> f64 {
   (duration.as_secs() as f64) + ((duration.subsec_nanos() as f64) / 1e9)
 }

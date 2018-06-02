@@ -107,8 +107,7 @@ impl ::server::RequestHandler for CommandHandler {
       StatusCode::OK,
       Cow::from(html_string),
       "text/html")
-      //.with_header(header::CacheControl(
-      //   vec![header::CacheDirective::MaxAge(0)]))
+
   }
 
 }

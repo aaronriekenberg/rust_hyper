@@ -6,7 +6,6 @@ worker_threads: 8
 
 main_page_info:
   title: Aaron's Raspberry Pi
-  cache_max_age_seconds: 60
 
 commands:
 
@@ -110,11 +109,9 @@ static_paths:
 - http_path: /style.css
   fs_path: style.css
   content_type: text/css
-  cache_max_age_seconds: 60
   include_in_main_page: false
 
 - http_path: /favicon.ico
   fs_path: raspberrypi-favicon.ico
   content_type: image/x-icon
-  cache_max_age_seconds: 60
   include_in_main_page: false

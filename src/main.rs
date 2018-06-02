@@ -54,8 +54,7 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
     let handler =
       handlers::static_file::StaticFileHandler::new(
         static_path_info.fs_path().clone(),
-        mime_type,
-        static_path_info.cache_max_age_seconds());
+        mime_type);
     path_to_handler.insert(static_path_info.http_path().clone(), Arc::new(handler));
   }
 

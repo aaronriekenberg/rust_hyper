@@ -7,9 +7,7 @@ use std::borrow::Cow;
 use std::time::SystemTime;
 
 pub struct IndexHandler {
-  index_string: String,
-  creation_time: SystemTime,
-  cache_max_age_seconds: u32
+  index_string: String
 }
 
 impl IndexHandler {
@@ -75,9 +73,7 @@ impl IndexHandler {
 
     Ok(
       IndexHandler {
-        index_string: s,
-        creation_time: now,
-        cache_max_age_seconds: config.main_page_info().cache_max_age_seconds()
+        index_string: s
       }
     )
   }
@@ -86,26 +82,13 @@ impl IndexHandler {
 
 impl ::server::RequestHandler for IndexHandler {
 
-  fn handle(&self, req_context: &::server::RequestContext) -> Response<Body> {
+  fn handle(&self, _: &::server::RequestContext) -> Response<Body> {
 
-    match ::server::handle_not_modified(
-      &req_context,
-      &self.creation_time,
-      self.cache_max_age_seconds) {
+    ::server::build_response_string(
+      StatusCode::OK,
+      Cow::from(self.index_string.clone()),
+      "text/html")
 
-      Some(response) => response,
-
-      None =>
-        ::server::build_response_string(
-          StatusCode::OK,
-          Cow::from(self.index_string.clone()),
-          "text/html")
-          //.with_header(header::LastModified(From::from(self.creation_time)))
-          //.with_header(header::CacheControl(
-          //   vec![header::CacheDirective::Public,
-          //        header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
-
-    }
   }
 
 }

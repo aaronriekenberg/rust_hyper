@@ -10,7 +10,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{Instant, SystemTime};
+use std::time::Instant;
 
 #[derive(Debug)]
 pub struct RequestContext {
@@ -123,30 +123,6 @@ pub fn build_response_vec(
     .header("Content-Type", HeaderValue::from_str(&content_type).unwrap())
     .body(From::from(body))
     .unwrap()
-}
-
-pub fn handle_not_modified(
-  req_context: &RequestContext,
-  data_last_modified: &SystemTime,
-  cache_max_age_seconds: u32) -> Option<Response<Body>> {
-
-/*
-  if let Some(ref if_modified_since_header) =
-     req_context.req().headers().get::<header::IfModifiedSince>() {
-    let if_modified_since = SystemTime::from(if_modified_since_header.0);
-    if ::utils::system_time_in_seconds_u64(&data_last_modified) <=
-       ::utils::system_time_in_seconds_u64(&if_modified_since) {
-      return Some(
-        build_response_status(StatusCode::NotModified)
-          .with_header(header::LastModified(From::from(*data_last_modified)))
-          .with_header(header::CacheControl(
-                         vec![header::CacheDirective::Public,
-                              header::CacheDirective::MaxAge(cache_max_age_seconds)])));
-    }
-  }
-*/
-
-  None
 }
 
 fn log_request_and_response(

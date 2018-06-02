@@ -33,7 +33,6 @@ pub struct StaticPathInfo {
   http_path: String,
   fs_path: String,
   content_type: String,
-  cache_max_age_seconds: u32,
   include_in_main_page: bool
 }
 
@@ -51,10 +50,6 @@ impl StaticPathInfo {
     &self.content_type
   }
 
-  pub fn cache_max_age_seconds(&self) -> u32 {
-    self.cache_max_age_seconds
-  }
-
   pub fn include_in_main_page(&self) -> bool {
     self.include_in_main_page
   }
@@ -63,18 +58,13 @@ impl StaticPathInfo {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct MainPageInfo {
-  title: String,
-  cache_max_age_seconds: u32
+  title: String
 }
 
 impl MainPageInfo {
 
   pub fn title(&self) -> &String {
     &self.title
-  }
-
-  pub fn cache_max_age_seconds(&self) -> u32 {
-    self.cache_max_age_seconds
   }
 
 }

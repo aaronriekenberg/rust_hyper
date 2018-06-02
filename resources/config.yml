@@ -6,7 +6,6 @@ worker_threads: 8
 
 main_page_info:
   title: Rusty Web
-  cache_max_age_seconds: 3600
 
 commands:
 
@@ -30,5 +29,4 @@ static_paths:
 - http_path: /style.css
   fs_path: resources/style.css
   content_type: text/css
-  cache_max_age_seconds: 3600
   include_in_main_page: false
