@@ -47,24 +47,17 @@ pub trait RequestHandler : Send + Sync {
 
 #[derive(Debug)]
 pub struct ThreadConfiguration {
-  server_threads: usize,
   worker_threads: usize
 }
 
 impl ThreadConfiguration {
 
   pub fn new(
-    server_threads: usize,
     worker_threads: usize) -> Self {
 
     ThreadConfiguration {
-      server_threads,
       worker_threads
     }
-  }
-
-  pub fn server_threads(&self) -> usize {
-    self.server_threads
   }
 
   pub fn worker_threads(&self) -> usize {
@@ -167,15 +160,6 @@ fn log_request_and_response(
 
   let req = req_context.req();
 
-/*
-  let remote_addr = match req.remote_addr() {
-    Some(ref remote_addr) => Cow::from(remote_addr.to_string()),
-    None => Cow::from("")
-  };
-*/
-
-  let remote_addr = "UNKNOWN";
-
   let method = req.method().to_string();
 
   let uri = req.uri().to_string();
@@ -191,8 +175,7 @@ fn log_request_and_response(
 
   let duration = ::utils::duration_in_seconds_f64(&req_context.start_time().elapsed());
 
-  info!("{} \"{} {} {}\" {} {} {:.9}s", 
-        remote_addr,
+  info!("\"{} {} {}\" {} {} {:.9}s",
         method, uri, version,
         response_status, content_length,
         duration);
@@ -278,7 +261,6 @@ impl ThreadedServer {
 
 fn run_server(
   listen_addr: SocketAddr,
-  server_threads: usize,
   threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error>> {
 
   let server = Server::bind(&listen_addr)
@@ -310,5 +292,5 @@ pub fn run_forever(
 
   info!("thread_configuration = {:#?}", thread_configuration);
 
-  run_server(listen_addr, thread_configuration.server_threads(), threaded_server)
+  run_server(listen_addr, threaded_server)
 }

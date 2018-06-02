@@ -31,7 +31,6 @@ fn install_panic_hook() {
 fn build_thread_configuration(config: &config::Configuration) -> server::ThreadConfiguration {
 
   server::ThreadConfiguration::new(
-    config.server_threads(),
     config.worker_threads()
   )
 
