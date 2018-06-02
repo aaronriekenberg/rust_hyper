@@ -3,9 +3,7 @@ use chrono::prelude::Local;
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
-use hyper::header;
-use hyper::server::Response;
-use hyper::StatusCode;
+use hyper::{Body, Response, StatusCode};
 
 use std::borrow::Cow;
 use std::process::Command;
@@ -98,7 +96,7 @@ impl ::server::RequestHandler for CommandHandler {
 
   fn use_worker_threadpool(&self) -> bool { true }
 
-  fn handle(&self, _: &::server::RequestContext) -> Response {
+  fn handle(&self, _: &::server::RequestContext) -> Response<Body> {
     let command_output = self.run_command();
 
     let pre_string = self.build_pre_string(command_output);
@@ -106,11 +104,11 @@ impl ::server::RequestHandler for CommandHandler {
     let html_string = self.build_html_string(pre_string);
 
     ::server::build_response_string(
-      StatusCode::Ok,
+      StatusCode::OK,
       Cow::from(html_string),
-      header::ContentType::html())
-      .with_header(header::CacheControl(
-         vec![header::CacheDirective::MaxAge(0)]))
+      Cow::from("text/html"))
+      //.with_header(header::CacheControl(
+      //   vec![header::CacheDirective::MaxAge(0)]))
   }
 
 }

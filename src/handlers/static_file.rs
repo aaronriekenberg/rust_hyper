@@ -1,10 +1,9 @@
 use mime::Mime;
 
-use hyper::header;
-use hyper::server::Response;
-use hyper::StatusCode;
+use hyper::{Body, Response, StatusCode};
 
 use std::fs;
+use std::borrow::Cow;
 use std::fs::File;
 use std::io::Read;
 
@@ -40,19 +39,19 @@ impl ::server::RequestHandler for StaticFileHandler {
 
   fn use_worker_threadpool(&self) -> bool { true }
 
-  fn handle(&self, req_context: &::server::RequestContext) -> Response {
+  fn handle(&self, req_context: &::server::RequestContext) -> Response<Body> {
     debug!("StaticFileHandler.handle req_context = {:?}", req_context);
 
     let file_metadata =
       match fs::metadata(&self.file_path) {
         Ok(metadata) => metadata,
-        Err(_) => return ::server::build_response_status(StatusCode::NotFound)
+        Err(_) => return ::server::build_response_status(StatusCode::NOT_FOUND)
       };
 
     let file_modified =
       match file_metadata.modified() {
         Ok(file_modified) => file_modified,
-        Err(_) => return ::server::build_response_status(StatusCode::NotFound)
+        Err(_) => return ::server::build_response_status(StatusCode::NOT_FOUND)
       };
 
     if let Some(response) = ::server::handle_not_modified(
@@ -65,16 +64,16 @@ impl ::server::RequestHandler for StaticFileHandler {
     match self.read_file() {
       Ok(file_contents) => {
         ::server::build_response_vec(
-          StatusCode::Ok,
+          StatusCode::OK,
           file_contents,
-          header::ContentType(self.mime_type.clone()))
-          .with_header(header::LastModified(From::from(file_modified)))
-          .with_header(header::CacheControl(
-             vec![header::CacheDirective::Public,
-                  header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
+          Cow::from(self.mime_type.to_string()))
+          //.with_header(header::LastModified(From::from(file_modified)))
+          //.with_header(header::CacheControl(
+          //   vec![header::CacheDirective::Public,
+          //        header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
       },
       Err(_) => {
-        ::server::build_response_status(StatusCode::NotFound)
+        ::server::build_response_status(StatusCode::NOT_FOUND)
       }
     }
   }

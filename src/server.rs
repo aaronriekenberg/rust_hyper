@@ -2,9 +2,9 @@ use futures::Future;
 
 use futures_cpupool::CpuPool;
 
-use hyper::header;
-use hyper::server::{Http, Request, Response};
-use hyper::StatusCode;
+use hyper::{Body, Response, Request, Server, StatusCode};
+use hyper::header::HeaderValue;
+use hyper::service::service_fn;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -14,20 +14,20 @@ use std::time::{Instant, SystemTime};
 
 #[derive(Debug)]
 pub struct RequestContext {
-  req: Request,
+  req: Request<Body>,
   start_time: Instant
 }
 
 impl RequestContext {
 
-  fn new(req: Request) -> Self {
+  fn new(req: Request<Body>) -> Self {
     RequestContext {
       req,
       start_time: Instant::now()
     }
   }
 
-  pub fn req(&self) -> &Request {
+  pub fn req(&self) -> &Request<Body> {
     &self.req
   }
 
@@ -41,7 +41,7 @@ pub trait RequestHandler : Send + Sync {
 
   fn use_worker_threadpool(&self) -> bool { false }
 
-  fn handle(&self, req_context: &RequestContext) -> Response;
+  fn handle(&self, req_context: &RequestContext) -> Response<Body>;
 
 }
 
@@ -103,38 +103,46 @@ impl RouteConfiguration {
 }
 
 pub fn build_response_status(
-  status_code: StatusCode) -> Response {
-  Response::new()
-    .with_status(status_code)
+  status_code: StatusCode) -> Response<Body> {
+  Response::builder()
+    .status(status_code)
+    .body(Body::empty())
+    .unwrap()
+  // XXX
 }
 
 pub fn build_response_string(
   status_code: StatusCode,
   body: Cow<'static, str>,
-  content_type: header::ContentType) -> Response
-{
-  build_response_status(status_code)
-    .with_header(content_type)
-    .with_header(header::ContentLength(body.len() as u64))
-    .with_body(body)
+  content_type: Cow<'static, str>) -> Response<Body> {
+  Response::builder()
+    .status(status_code)
+    // XXX
+    .header("Content-Type", HeaderValue::from_str(&content_type).unwrap())
+    .body(From::from(body))
+    // XXX
+    .unwrap()
 }
 
 pub fn build_response_vec(
   status_code: StatusCode,
   body: Vec<u8>,
-  content_type: header::ContentType) -> Response
-{
-  build_response_status(status_code)
-    .with_header(content_type)
-    .with_header(header::ContentLength(body.len() as u64))
-    .with_body(body)
+  content_type: Cow<'static, str>) -> Response<Body> {
+  Response::builder()
+    .status(status_code)
+    // XXX
+    .header("Content-Type", HeaderValue::from_str(&content_type).unwrap())
+    .body(From::from(body))
+    .unwrap()
+  // XXX
 }
 
 pub fn handle_not_modified(
   req_context: &RequestContext,
   data_last_modified: &SystemTime,
-  cache_max_age_seconds: u32) -> Option<Response> {
+  cache_max_age_seconds: u32) -> Option<Response<Body>> {
 
+/*
   if let Some(ref if_modified_since_header) =
      req_context.req().headers().get::<header::IfModifiedSince>() {
     let if_modified_since = SystemTime::from(if_modified_since_header.0);
@@ -148,31 +156,36 @@ pub fn handle_not_modified(
                               header::CacheDirective::MaxAge(cache_max_age_seconds)])));
     }
   }
+*/
 
   None
 }
 
 fn log_request_and_response(
   req_context: &RequestContext,
-  resp: &Response) {
+  resp: &Response<Body>) {
 
   let req = req_context.req();
 
+/*
   let remote_addr = match req.remote_addr() {
     Some(ref remote_addr) => Cow::from(remote_addr.to_string()),
     None => Cow::from("")
   };
+*/
+
+  let remote_addr = "UNKNOWN";
 
   let method = req.method().to_string();
 
   let uri = req.uri().to_string();
 
-  let version = req.version().to_string();
+  let version = format!("{:?}", req.version());
 
   let response_status = resp.status().as_u16().to_string();
 
-  let content_length = match resp.headers().get::<header::ContentLength>() {
-    Some(ref content_length_header) => Cow::from(content_length_header.0.to_string()),
+  let content_length = match resp.headers().get("Content-Length") {
+    Some(ref content_length_header) => Cow::from(format!("{:?}", content_length_header)),
     None => Cow::from("0")
   };
 
@@ -190,7 +203,7 @@ struct InnerThreadedServer {
   route_configuration: RouteConfiguration
 }
 
-type ThreadedServerFuture = Box<Future<Item = ::hyper::Response, Error = ::hyper::Error>>;
+type ThreadedServerFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=::hyper::Error> + Send>;
 
 #[derive(Clone)]
 struct ThreadedServer {
@@ -220,7 +233,7 @@ impl ThreadedServer {
 
   fn invoke_handler(
     handler: &RouteConfigurationHandler,
-    req_context: &RequestContext) -> ::hyper::Response {
+    req_context: &RequestContext) -> Response<Body> {
 
     let response = handler.handle(&req_context);
 
@@ -231,21 +244,16 @@ impl ThreadedServer {
 
 }
 
-impl ::hyper::server::Service for ThreadedServer {
+impl ThreadedServer {
 
-  type Request = ::hyper::Request;
-  type Response = ::hyper::Response;
-  type Error = ::hyper::Error;
-  type Future = ThreadedServerFuture;
-
-  fn call(&self, req: Request) -> Self::Future {
+  fn call(&self, req: Request<Body>) -> ThreadedServerFuture {
 
     let req_context = RequestContext::new(req);
 
     let route_configuration = &self.inner.route_configuration;
 
     let handler = route_configuration.path_to_handler()
-       .get(req_context.req().path())
+       .get(req_context.req().uri().path())
        .unwrap_or(route_configuration.not_found_handler());
 
     if handler.use_worker_threadpool() {
@@ -273,11 +281,20 @@ fn run_server(
   server_threads: usize,
   threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error>> {
 
-  let server = Http::new().bind(&listen_addr, move || Ok(threaded_server.clone()))?;
+  let server = Server::bind(&listen_addr)
+    .serve(move || {
+      let threaded_server_clone = threaded_server.clone();
+
+      service_fn(move |req: Request<Body>| {
+        threaded_server_clone.call(req)
+      })
+
+    })
+    .map_err(|e| warn!("server error: {}", e));
 
   info!("Listening on http://{}", listen_addr);
 
-  server.run_threads(server_threads);
+  ::hyper::rt::run(server);
 
   Err(From::from("run_server exiting"))
 }

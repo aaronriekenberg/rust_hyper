@@ -4,6 +4,7 @@ extern crate hyper;
 extern crate fern;
 extern crate futures;
 extern crate futures_cpupool;
+extern crate http;
 #[macro_use] extern crate log;
 extern crate mime;
 #[macro_use] extern crate serde_derive;

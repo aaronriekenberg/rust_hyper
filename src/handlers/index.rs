@@ -1,9 +1,7 @@
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
-use hyper::header;
-use hyper::server::Response;
-use hyper::StatusCode;
+use hyper::{Body, Response, StatusCode};
 
 use std::borrow::Cow;
 use std::time::SystemTime;
@@ -88,7 +86,7 @@ impl IndexHandler {
 
 impl ::server::RequestHandler for IndexHandler {
 
-  fn handle(&self, req_context: &::server::RequestContext) -> Response {
+  fn handle(&self, req_context: &::server::RequestContext) -> Response<Body> {
 
     match ::server::handle_not_modified(
       &req_context,
@@ -99,13 +97,13 @@ impl ::server::RequestHandler for IndexHandler {
 
       None =>
         ::server::build_response_string(
-          StatusCode::Ok,
+          StatusCode::OK,
           Cow::from(self.index_string.clone()),
-          header::ContentType::html())
-          .with_header(header::LastModified(From::from(self.creation_time)))
-          .with_header(header::CacheControl(
-             vec![header::CacheDirective::Public,
-                  header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
+          Cow::from("text/html"))
+          //.with_header(header::LastModified(From::from(self.creation_time)))
+          //.with_header(header::CacheControl(
+          //   vec![header::CacheDirective::Public,
+          //        header::CacheDirective::MaxAge(self.cache_max_age_seconds)]))
 
     }
   }
