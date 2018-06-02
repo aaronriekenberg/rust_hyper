@@ -1,6 +1,5 @@
 use futures::Future;
-
-use futures_cpupool::CpuPool;
+use futures::future::poll_fn;
 
 use hyper::{Body, Response, Request, Server, StatusCode};
 use hyper::header::HeaderValue;
@@ -11,6 +10,8 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
+
+use tokio_threadpool::blocking;
 
 #[derive(Debug)]
 pub struct RequestContext {
@@ -39,30 +40,9 @@ impl RequestContext {
 
 pub trait RequestHandler : Send + Sync {
 
-  fn use_worker_threadpool(&self) -> bool { false }
+  fn blocking(&self) -> bool { false }
 
   fn handle(&self, req_context: &RequestContext) -> Response<Body>;
-
-}
-
-#[derive(Debug)]
-pub struct ThreadConfiguration {
-  worker_threads: usize
-}
-
-impl ThreadConfiguration {
-
-  pub fn new(
-    worker_threads: usize) -> Self {
-
-    ThreadConfiguration {
-      worker_threads
-    }
-  }
-
-  pub fn worker_threads(&self) -> usize {
-    self.worker_threads
-  }
 
 }
 
@@ -153,11 +133,10 @@ fn log_request_and_response(
 }
 
 struct InnerThreadedServer {
-  worker_pool: CpuPool,
   route_configuration: RouteConfiguration
 }
 
-type ThreadedServerFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=::hyper::Error> + Send>;
+type ThreadedServerFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=::std::io::Error> + Send>;
 
 #[derive(Clone)]
 struct ThreadedServer {
@@ -167,18 +146,11 @@ struct ThreadedServer {
 impl ThreadedServer {
 
   fn new(
-    worker_threads: usize,
     route_configuration: RouteConfiguration) -> Self {
-
-    let worker_pool = ::futures_cpupool::Builder::new()
-      .pool_size(worker_threads)
-      .name_prefix("worker-")
-      .create();
 
     ThreadedServer {
       inner: Arc::new(
         InnerThreadedServer {
-          worker_pool,
           route_configuration
         }
       )
@@ -210,13 +182,21 @@ impl ThreadedServer {
        .get(req_context.req().uri().path())
        .unwrap_or(route_configuration.not_found_handler());
 
-    if handler.use_worker_threadpool() {
+    if handler.blocking() {
 
       let handler_clone = Arc::clone(handler);
 
-      Box::new(self.inner.worker_pool.spawn_fn(move || {
+      Box::new(poll_fn(move || {
 
-        Ok(ThreadedServer::invoke_handler(&handler_clone, &req_context))
+        blocking(|| {
+
+          ThreadedServer::invoke_handler(&handler_clone, &req_context)
+
+        })
+        .map_err(|e| { 
+          warn!("blocking error {}", e);
+          ::std::io::Error::new(::std::io::ErrorKind::Other, e)
+        })
 
       }))
 
@@ -254,14 +234,10 @@ fn run_server(
 
 pub fn run_forever(
   listen_addr: SocketAddr,
-  thread_configuration: ThreadConfiguration,
   route_configuration: RouteConfiguration) -> Result<(), Box<::std::error::Error>> {
 
   let threaded_server = ThreadedServer::new(
-    thread_configuration.worker_threads(),
     route_configuration);
-
-  info!("thread_configuration = {:#?}", thread_configuration);
 
   run_server(listen_addr, threaded_server)
 }

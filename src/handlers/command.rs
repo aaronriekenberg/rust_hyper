@@ -94,7 +94,7 @@ impl CommandHandler {
 
 impl ::server::RequestHandler for CommandHandler {
 
-  fn use_worker_threadpool(&self) -> bool { true }
+  fn blocking(&self) -> bool { true }
 
   fn handle(&self, _: &::server::RequestContext) -> Response<Body> {
     let command_output = self.run_command();

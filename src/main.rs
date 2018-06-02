@@ -3,12 +3,12 @@ extern crate hyper;
 #[macro_use] extern crate horrorshow;
 extern crate fern;
 extern crate futures;
-extern crate futures_cpupool;
 extern crate http;
 #[macro_use] extern crate log;
 extern crate mime;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
+extern crate tokio_threadpool;
 
 mod config;
 mod handlers;
@@ -26,14 +26,6 @@ fn install_panic_hook() {
     original_panic_hook(panic_info);
     std::process::exit(1);
   }));
-}
-
-fn build_thread_configuration(config: &config::Configuration) -> server::ThreadConfiguration {
-
-  server::ThreadConfiguration::new(
-    config.worker_threads()
-  )
-
 }
 
 fn build_route_configuration(config: &config::Configuration) -> Result<server::RouteConfiguration, Box<std::error::Error>> {
@@ -81,12 +73,10 @@ fn main() {
 
   let listen_addr = config.listen_address().parse().expect("invalid listen_address");
 
-  let thread_configuration = build_thread_configuration(&config);
 
   let route_configuration = build_route_configuration(&config).expect("failed to build route_configuration");
 
   server::run_forever(
     listen_addr,
-    thread_configuration,
     route_configuration).expect("server::run_forever failed");
 }
