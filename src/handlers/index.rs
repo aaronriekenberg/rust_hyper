@@ -87,7 +87,7 @@ impl ::server::RequestHandler for IndexHandler {
     ::server::build_response_string(
       StatusCode::OK,
       Cow::from(self.index_string.clone()),
-      "text/html")
+      ::server::TEXT_HTML_CONTENT_TYPE)
 
   }
 

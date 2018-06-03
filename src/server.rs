@@ -75,6 +75,10 @@ impl RouteConfiguration {
 
 }
 
+pub static TEXT_PLAIN_CONTENT_TYPE: &'static str = "text/plain";
+
+pub static TEXT_HTML_CONTENT_TYPE: &'static str = "text/html";
+
 pub fn build_response_status(
   status_code: StatusCode) -> Response<Body> {
   Response::builder()
