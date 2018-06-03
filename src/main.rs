@@ -5,7 +5,6 @@ extern crate fern;
 extern crate futures;
 extern crate http;
 #[macro_use] extern crate log;
-extern crate mime;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
 extern crate tokio_threadpool;
@@ -42,11 +41,10 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
   }
 
   for static_path_info in config.static_paths() {
-    let mime_type = static_path_info.content_type().parse()?;
     let handler =
       handlers::static_file::StaticFileHandler::new(
         static_path_info.fs_path().clone(),
-        mime_type);
+        static_path_info.content_type())?;
     path_to_handler.insert(static_path_info.http_path().clone(), Arc::new(handler));
   }
 

@@ -101,10 +101,10 @@ pub fn build_response_string(
 pub fn build_response_vec(
   status_code: StatusCode,
   body: Vec<u8>,
-  content_type: Cow<'static, str>) -> Response<Body> {
+  content_type: HeaderValue) -> Response<Body> {
   Response::builder()
     .status(status_code)
-    .header(CONTENT_TYPE, HeaderValue::from_str(&content_type).unwrap())
+    .header(CONTENT_TYPE, content_type)
     .body(From::from(body))
     .unwrap()
 }

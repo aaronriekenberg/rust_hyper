@@ -1,23 +1,23 @@
-use mime::Mime;
-
 use hyper::{Body, Response, StatusCode};
+use hyper::header::HeaderValue;
 
-use std::borrow::Cow;
 use std::fs::File;
 use std::io::Read;
 
 pub struct StaticFileHandler {
   file_path: String,
-  mime_type: Mime
+  content_type_header_value: HeaderValue
 }
 
 impl StaticFileHandler {
 
-  pub fn new(file_path: String, mime_type: Mime) -> Self {
-    StaticFileHandler { 
+  pub fn new(file_path: String, content_type: &str) -> Result<Self, Box<::std::error::Error>> {
+    let content_type_header_value = HeaderValue::from_str(content_type)?;
+
+    Ok(StaticFileHandler {
       file_path,
-      mime_type
-    }
+      content_type_header_value
+    })
   }
 
   fn read_file(&self) -> Result<Vec<u8>, ::std::io::Error> {
@@ -44,7 +44,7 @@ impl ::server::RequestHandler for StaticFileHandler {
         ::server::build_response_vec(
           StatusCode::OK,
           file_contents,
-          Cow::from(self.mime_type.to_string()))
+          self.content_type_header_value.clone())
       },
       Err(_) => {
         ::server::build_response_status(StatusCode::NOT_FOUND)
