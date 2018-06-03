@@ -2,7 +2,7 @@ use futures::Future;
 use futures::future::poll_fn;
 
 use hyper::{Body, Response, Request, Server, StatusCode};
-use hyper::header::HeaderValue;
+use hyper::header::{CONTENT_TYPE, HeaderValue};
 use hyper::service::service_fn;
 
 use std::borrow::Cow;
@@ -89,7 +89,7 @@ pub fn build_response_string(
   content_type: &'static str) -> Response<Body> {
   Response::builder()
     .status(status_code)
-    .header("Content-Type", content_type)
+    .header(CONTENT_TYPE, content_type)
     .body(From::from(body))
     .unwrap()
 }
@@ -100,7 +100,7 @@ pub fn build_response_vec(
   content_type: Cow<'static, str>) -> Response<Body> {
   Response::builder()
     .status(status_code)
-    .header("Content-Type", HeaderValue::from_str(&content_type).unwrap())
+    .header(CONTENT_TYPE, HeaderValue::from_str(&content_type).unwrap())
     .body(From::from(body))
     .unwrap()
 }
