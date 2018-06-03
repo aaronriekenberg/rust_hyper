@@ -119,16 +119,11 @@ fn log_request_and_response(
 
   let response_status = resp.status().as_u16().to_string();
 
-  let content_length = match resp.headers().get("Content-Length") {
-    Some(ref content_length_header) => Cow::from(format!("{:?}", content_length_header)),
-    None => Cow::from("0")
-  };
-
   let duration = ::utils::duration_in_seconds_f64(&req_context.start_time().elapsed());
 
-  info!("\"{} {} {}\" {} {} {:.9}s",
+  info!("\"{} {} {}\" {} {:.9}s",
         method, uri, version,
-        response_status, content_length,
+        response_status,
         duration);
 }
 
