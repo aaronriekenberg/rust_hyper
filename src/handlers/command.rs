@@ -106,7 +106,7 @@ impl ::server::RequestHandler for CommandHandler {
     ::server::build_response_string(
       StatusCode::OK,
       Cow::from(html_string),
-      ::server::TEXT_HTML_CONTENT_TYPE)
+      ::server::text_html_content_type_header_value())
 
   }
 

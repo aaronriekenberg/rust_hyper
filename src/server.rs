@@ -75,9 +75,13 @@ impl RouteConfiguration {
 
 }
 
-pub static TEXT_PLAIN_CONTENT_TYPE: &'static str = "text/plain";
+pub fn text_plain_content_type_header_value() -> HeaderValue {
+  HeaderValue::from_static("text/plain")
+}
 
-pub static TEXT_HTML_CONTENT_TYPE: &'static str = "text/html";
+pub fn text_html_content_type_header_value() -> HeaderValue {
+  HeaderValue::from_static("text/html")
+}
 
 pub fn build_response_status(
   status_code: StatusCode) -> Response<Body> {
@@ -90,7 +94,7 @@ pub fn build_response_status(
 pub fn build_response_string(
   status_code: StatusCode,
   body: Cow<'static, str>,
-  content_type: &'static str) -> Response<Body> {
+  content_type: HeaderValue) -> Response<Body> {
   Response::builder()
     .status(status_code)
     .header(CONTENT_TYPE, content_type)

@@ -11,7 +11,7 @@ impl ::server::RequestHandler for NotFoundHandler {
     ::server::build_response_string(
       StatusCode::NOT_FOUND,
       Cow::from("Route not found"),
-      ::server::TEXT_PLAIN_CONTENT_TYPE)
+      ::server::text_plain_content_type_header_value())
 
   }
 
