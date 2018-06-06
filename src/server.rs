@@ -1,5 +1,4 @@
 use futures::Future;
-use futures::future::poll_fn;
 
 use hyper::{Body, Response, Request, Server, StatusCode};
 use hyper::header::{CONTENT_TYPE, HeaderValue};
@@ -10,8 +9,6 @@ use std::collections::HashMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
-
-use tokio_threadpool::blocking;
 
 #[derive(Debug)]
 pub struct RequestContext {
@@ -28,21 +25,49 @@ impl RequestContext {
     }
   }
 
-  pub fn req(&self) -> &Request<Body> {
-    &self.req
-  }
+}
 
-  pub fn start_time(&self) -> &Instant {
-    &self.start_time
+struct RequestLogInfo {
+  start_time: Instant,
+  method: String,
+  uri: String,
+  version: String
+}
+
+impl RequestLogInfo {
+
+  fn new(req_context: &RequestContext) -> Self {
+    let req = &req_context.req;
+
+    RequestLogInfo {
+      start_time: req_context.start_time,
+      method: req.method().to_string(),
+      uri: req.uri().to_string(),
+      version: format!("{:?}", req.version())
+    }
   }
 
 }
 
+fn log_request_and_response(
+  req_log_info: &RequestLogInfo,
+  resp: &Response<Body>) {
+
+  let response_status = resp.status().as_u16().to_string();
+
+  let duration = ::utils::duration_in_seconds_f64(&req_log_info.start_time.elapsed());
+
+  info!("\"{} {} {}\" {} {:.9}s",
+        req_log_info.method, req_log_info.uri, req_log_info.version,
+        response_status,
+        duration);
+}
+
+pub type ResponseFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=::std::io::Error> + Send>;
+
 pub trait RequestHandler : Send + Sync {
 
-  fn blocking(&self) -> bool { false }
-
-  fn handle(&self, req_context: &RequestContext) -> Response<Body>;
+  fn handle(&self, req_context: &RequestContext) -> ResponseFuture;
 
 }
 
@@ -85,16 +110,19 @@ pub fn text_html_content_type_header_value() -> HeaderValue {
 
 pub fn build_response_status(
   status_code: StatusCode) -> Response<Body> {
+
   Response::builder()
     .status(status_code)
     .body(Body::empty())
     .unwrap()
+
 }
 
 pub fn build_response_string(
   status_code: StatusCode,
   body: Cow<'static, str>,
   content_type: HeaderValue) -> Response<Body> {
+
   Response::builder()
     .status(status_code)
     .header(CONTENT_TYPE, content_type)
@@ -106,6 +134,7 @@ pub fn build_response_vec(
   status_code: StatusCode,
   body: Vec<u8>,
   content_type: HeaderValue) -> Response<Body> {
+
   Response::builder()
     .status(status_code)
     .header(CONTENT_TYPE, content_type)
@@ -113,33 +142,10 @@ pub fn build_response_vec(
     .unwrap()
 }
 
-fn log_request_and_response(
-  req_context: &RequestContext,
-  resp: &Response<Body>) {
-
-  let req = req_context.req();
-
-  let method = req.method().to_string();
-
-  let uri = req.uri().to_string();
-
-  let version = format!("{:?}", req.version());
-
-  let response_status = resp.status().as_u16().to_string();
-
-  let duration = ::utils::duration_in_seconds_f64(&req_context.start_time().elapsed());
-
-  info!("\"{} {} {}\" {} {:.9}s",
-        method, uri, version,
-        response_status,
-        duration);
-}
 
 struct InnerThreadedServer {
   route_configuration: RouteConfiguration
 }
-
-type ThreadedServerFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=::std::io::Error> + Send>;
 
 #[derive(Clone)]
 struct ThreadedServer {
@@ -160,55 +166,32 @@ impl ThreadedServer {
     }
   }
 
-  fn invoke_handler(
-    handler: &RouteConfigurationHandler,
-    req_context: &RequestContext) -> Response<Body> {
-
-    let response = handler.handle(&req_context);
-
-    log_request_and_response(&req_context, &response);
-
-    response
-  }
-
 }
 
 impl ThreadedServer {
 
-  fn call(&self, req: Request<Body>) -> ThreadedServerFuture {
+  fn call(&self, req: Request<Body>) -> ResponseFuture {
 
     let req_context = RequestContext::new(req);
+
+    let req_log_info = RequestLogInfo::new(&req_context);
 
     let route_configuration = &self.inner.route_configuration;
 
     let handler = route_configuration.path_to_handler()
-       .get(req_context.req().uri().path())
-       .unwrap_or(route_configuration.not_found_handler());
+      .get(req_context.req.uri().path())
+      .unwrap_or(route_configuration.not_found_handler());
 
-    if handler.blocking() {
-
-      let handler_clone = Arc::clone(handler);
-
-      Box::new(poll_fn(move || {
-
-        blocking(|| {
-
-          ThreadedServer::invoke_handler(&handler_clone, &req_context)
-
+    Box::new(
+      handler.handle(&req_context)
+        .map(move |resp| {
+          log_request_and_response(&req_log_info, &resp);
+          resp
         })
-        .map_err(|e| { 
-          warn!("blocking error {}", e);
-          ::std::io::Error::new(::std::io::ErrorKind::Other, e)
-        })
-
-      }))
-
-    } else {
-
-      Box::new(::futures::future::ok(ThreadedServer::invoke_handler(&handler, &req_context)))
-
-    }
-
+        .map_err(|e| {
+          warn!("handler error: {}", e);
+          e
+        }))
   }
 
 }

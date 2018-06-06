@@ -7,6 +7,8 @@ extern crate http;
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
+extern crate tokio_fs;
+extern crate tokio_io;
 extern crate tokio_threadpool;
 
 mod config;

@@ -1,7 +1,9 @@
+use futures::future;
+
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
-use hyper::{Body, Response, StatusCode};
+use hyper::StatusCode;
 
 use std::borrow::Cow;
 use std::time::SystemTime;
@@ -82,12 +84,13 @@ impl IndexHandler {
 
 impl ::server::RequestHandler for IndexHandler {
 
-  fn handle(&self, _: &::server::RequestContext) -> Response<Body> {
+  fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
 
-    ::server::build_response_string(
-      StatusCode::OK,
-      Cow::from(self.index_string.clone()),
-      ::server::text_html_content_type_header_value())
+    Box::new(
+      future::ok(::server::build_response_string(
+                   StatusCode::OK,
+                   Cow::from(self.index_string.clone()),
+                   ::server::text_html_content_type_header_value())))
 
   }
 

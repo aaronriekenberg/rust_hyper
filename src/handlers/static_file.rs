@@ -1,8 +1,7 @@
-use hyper::{Body, Response, StatusCode};
-use hyper::header::HeaderValue;
+use futures::Future;
 
-use std::fs::File;
-use std::io::Read;
+use hyper::StatusCode;
+use hyper::header::HeaderValue;
 
 pub struct StaticFileHandler {
   file_path: String,
@@ -20,36 +19,27 @@ impl StaticFileHandler {
     })
   }
 
-  fn read_file(&self) -> Result<Vec<u8>, ::std::io::Error> {
-    let mut file = File::open(&self.file_path)?;
-
-    let mut file_contents = Vec::new();
-
-    file.read_to_end(&mut file_contents)?;
-
-    Ok(file_contents)
-  }
-
 }
 
 impl ::server::RequestHandler for StaticFileHandler {
 
-  fn blocking(&self) -> bool { true }
+  fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
+    let file_path_clone = self.file_path.clone();
+    let content_type_header_value_clone = self.content_type_header_value.clone();
 
-  fn handle(&self, req_context: &::server::RequestContext) -> Response<Body> {
-    debug!("StaticFileHandler.handle req_context = {:?}", req_context);
-
-    match self.read_file() {
-      Ok(file_contents) => {
-        ::server::build_response_vec(
-          StatusCode::OK,
-          file_contents,
-          self.content_type_header_value.clone())
-      },
-      Err(_) => {
-        ::server::build_response_status(StatusCode::NOT_FOUND)
-      }
-    }
+    Box::new(::tokio_fs::file::File::open(file_path_clone)
+      .and_then(move |file| {
+        let buf: Vec<u8> = Vec::new();
+        ::tokio_io::io::read_to_end(file, buf)
+          .and_then(move |item| {
+            Ok(::server::build_response_vec(
+              StatusCode::OK,
+              item.1,
+              content_type_header_value_clone))
+          })
+          .or_else(|_| Ok(::server::build_response_status(StatusCode::INTERNAL_SERVER_ERROR)))
+      })
+      .or_else(|_| Ok(::server::build_response_status(StatusCode::NOT_FOUND))))
   }
 
 }

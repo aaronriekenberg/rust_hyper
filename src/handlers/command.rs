@@ -1,5 +1,7 @@
 use chrono::prelude::Local;
 
+use futures::future::poll_fn;
+
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
@@ -8,6 +10,9 @@ use hyper::{Body, Response, StatusCode};
 use std::borrow::Cow;
 use std::process::Command;
 
+use tokio_threadpool::blocking;
+
+#[derive(Clone)]
 pub struct CommandHandler {
   command_info: ::config::CommandInfo,
   command_line_string: String
@@ -90,13 +95,8 @@ impl CommandHandler {
     html_string
   }
 
-}
+  fn execute_command(&self) -> Response<Body> {
 
-impl ::server::RequestHandler for CommandHandler {
-
-  fn blocking(&self) -> bool { true }
-
-  fn handle(&self, _: &::server::RequestContext) -> Response<Body> {
     let command_output = self.run_command();
 
     let pre_string = self.build_pre_string(command_output);
@@ -107,7 +107,22 @@ impl ::server::RequestHandler for CommandHandler {
       StatusCode::OK,
       Cow::from(html_string),
       ::server::text_html_content_type_header_value())
+  }
 
+}
+
+impl ::server::RequestHandler for CommandHandler {
+
+  fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
+
+    let self_clone = self.clone();
+
+    Box::new(
+      poll_fn(move || {
+        blocking(|| self_clone.execute_command())
+          .map_err(|e| ::std::io::Error::new(::std::io::ErrorKind::Other, e))
+      })
+    )
   }
 
 }
