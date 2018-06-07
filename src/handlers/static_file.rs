@@ -37,7 +37,6 @@ impl ::server::RequestHandler for StaticFileHandler {
               item.1,
               content_type_header_value_clone))
           })
-          .or_else(|_| Ok(::server::build_response_status(StatusCode::INTERNAL_SERVER_ERROR)))
       })
       .or_else(|_| Ok(::server::build_response_status(StatusCode::NOT_FOUND))))
   }

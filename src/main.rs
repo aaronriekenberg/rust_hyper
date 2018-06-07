@@ -9,7 +9,7 @@ extern crate http;
 extern crate serde_yaml;
 extern crate tokio_fs;
 extern crate tokio_io;
-extern crate tokio_threadpool;
+extern crate tokio_process;
 
 mod config;
 mod handlers;

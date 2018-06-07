@@ -27,6 +27,7 @@ impl RequestContext {
 
 }
 
+#[derive(Clone)]
 struct RequestLogInfo {
   start_time: Instant,
   method: String,
@@ -184,13 +185,19 @@ impl ThreadedServer {
 
     Box::new(
       handler.handle(&req_context)
-        .map(move |resp| {
-          log_request_and_response(&req_log_info, &resp);
-          resp
-        })
-        .map_err(|e| {
-          warn!("handler error: {}", e);
-          e
+        .then(move |result| {
+          match result {
+            Ok(resp) => {
+              log_request_and_response(&req_log_info, &resp);
+              Ok(resp)
+            },
+            Err(e) => {
+              warn!("handler error: {}", e);
+              let resp = build_response_status(StatusCode::INTERNAL_SERVER_ERROR);
+              log_request_and_response(&req_log_info.clone(), &resp);
+              Ok(resp)
+            }
+          }
         }))
   }
 

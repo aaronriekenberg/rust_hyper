@@ -1,16 +1,16 @@
 use chrono::prelude::Local;
 
-use futures::future::poll_fn;
+use futures::Future;
 
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
-use hyper::{Body, Response, StatusCode};
+use hyper::StatusCode;
 
 use std::borrow::Cow;
 use std::process::Command;
 
-use tokio_threadpool::blocking;
+use tokio_process::CommandExt;
 
 #[derive(Clone)]
 pub struct CommandHandler {
@@ -38,22 +38,25 @@ impl CommandHandler {
     }
   }
 
-  fn run_command(&self) -> String {
+  fn run_command(&self) -> Box<Future<Item=String, Error=::std::io::Error> + Send> {
 
     let mut command = Command::new(self.command_info.command());
 
     command.args(self.command_info.args());
 
-    match command.output() {
-      Ok(output) => {
-        let mut combined_output =
-          String::with_capacity(output.stderr.len() + output.stdout.len());
-        combined_output.push_str(&String::from_utf8_lossy(&output.stderr));
-        combined_output.push_str(&String::from_utf8_lossy(&output.stdout));
-        combined_output
-      },
-      Err(err) => format!("command error: {}", err),
-    }
+    Box::new(
+      command.output_async()
+        .and_then(move |output| {
+          let mut combined_output =
+            String::with_capacity(output.stderr.len() + output.stdout.len());
+          combined_output.push_str(&String::from_utf8_lossy(&output.stderr));
+          combined_output.push_str(&String::from_utf8_lossy(&output.stdout));
+          Ok(combined_output)
+        })
+        .or_else(move |err| {
+          Ok(format!("command error: {}", err))
+        })
+      )
   }
 
   fn build_pre_string(&self, command_output: String) -> String {
@@ -95,20 +98,6 @@ impl CommandHandler {
     html_string
   }
 
-  fn execute_command(&self) -> Response<Body> {
-
-    let command_output = self.run_command();
-
-    let pre_string = self.build_pre_string(command_output);
-
-    let html_string = self.build_html_string(pre_string);
-
-    ::server::build_response_string(
-      StatusCode::OK,
-      Cow::from(html_string),
-      ::server::text_html_content_type_header_value())
-  }
-
 }
 
 impl ::server::RequestHandler for CommandHandler {
@@ -118,11 +107,19 @@ impl ::server::RequestHandler for CommandHandler {
     let self_clone = self.clone();
 
     Box::new(
-      poll_fn(move || {
-        blocking(|| self_clone.execute_command())
-          .map_err(|e| ::std::io::Error::new(::std::io::ErrorKind::Other, e))
-      })
-    )
+      self.run_command()
+        .and_then(move |command_output| {
+
+          let pre_string = self_clone.build_pre_string(command_output);
+
+          let html_string = self_clone.build_html_string(pre_string);
+
+          Ok(::server::build_response_string(
+            StatusCode::OK,
+            Cow::from(html_string),
+            ::server::text_html_content_type_header_value()))
+
+        }))
   }
 
 }
