@@ -27,7 +27,6 @@ impl RequestContext {
 
 }
 
-#[derive(Clone)]
 struct RequestLogInfo {
   start_time: Instant,
   method: String,
@@ -194,7 +193,7 @@ impl ThreadedServer {
             Err(e) => {
               warn!("handler error: {}", e);
               let resp = build_response_status(StatusCode::INTERNAL_SERVER_ERROR);
-              log_request_and_response(&req_log_info.clone(), &resp);
+              log_request_and_response(&req_log_info, &resp);
               Ok(resp)
             }
           }
