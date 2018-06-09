@@ -17,8 +17,6 @@ mod logging;
 mod server;
 mod utils;
 
-use std::sync::Arc;
-
 fn install_panic_hook() {
 
   let original_panic_hook = std::panic::take_hook();
@@ -34,12 +32,12 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
   let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
 
   let index_handler = handlers::index::IndexHandler::new(config)?;
-  path_to_handler.insert("/".to_string(), Arc::new(index_handler));
+  path_to_handler.insert("/".to_string(), Box::new(index_handler));
 
   for command_info in config.commands() {
     let handler =
       handlers::command::CommandHandler::new(command_info.clone());
-    path_to_handler.insert(command_info.http_path().clone(), Arc::new(handler));
+    path_to_handler.insert(command_info.http_path().clone(), Box::new(handler));
   }
 
   for static_path_info in config.static_paths() {
@@ -47,14 +45,14 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
       handlers::static_file::StaticFileHandler::new(
         static_path_info.fs_path().clone(),
         static_path_info.content_type())?;
-    path_to_handler.insert(static_path_info.http_path().clone(), Arc::new(handler));
+    path_to_handler.insert(static_path_info.http_path().clone(), Box::new(handler));
   }
 
   let not_found_handler = handlers::not_found::NotFoundHandler;
 
   Ok(server::RouteConfiguration::new(
        path_to_handler,
-       Arc::new(not_found_handler)))
+       Box::new(not_found_handler)))
 }
 
 fn main() {
