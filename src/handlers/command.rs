@@ -9,34 +9,16 @@ use hyper::StatusCode;
 
 use std::borrow::Cow;
 use std::process::Command;
+use std::sync::Arc;
 
 use tokio_process::CommandExt;
 
-#[derive(Clone)]
-pub struct CommandHandler {
+struct InnerCommandHandler {
   command_info: ::config::CommandInfo,
   command_line_string: String
 }
 
-impl CommandHandler {
-
-  pub fn new(command_info: ::config::CommandInfo) -> Self {
-
-    let mut command_line_string = String::new();
-
-    command_line_string.push_str("$ ");
-    command_line_string.push_str(command_info.command());
-
-    for arg in command_info.args() {
-      command_line_string.push(' ');
-      command_line_string.push_str(arg);
-    }
-
-    CommandHandler {
-      command_info,
-      command_line_string
-    }
-  }
+impl InnerCommandHandler {
 
   fn run_command(&self) -> Box<Future<Item=String, Error=::std::io::Error> + Send> {
 
@@ -100,19 +82,49 @@ impl CommandHandler {
 
 }
 
+pub struct CommandHandler {
+  inner: Arc<InnerCommandHandler>
+}
+
+impl CommandHandler {
+
+  pub fn new(command_info: ::config::CommandInfo) -> Self {
+
+    let mut command_line_string = String::new();
+
+    command_line_string.push_str("$ ");
+    command_line_string.push_str(command_info.command());
+
+    for arg in command_info.args() {
+      command_line_string.push(' ');
+      command_line_string.push_str(arg);
+    }
+
+    CommandHandler {
+      inner: Arc::new(
+        InnerCommandHandler {
+          command_info,
+          command_line_string
+        }
+      )
+    }
+  }
+
+}
+
 impl ::server::RequestHandler for CommandHandler {
 
   fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
 
-    let self_clone = self.clone();
+    let inner_clone = Arc::clone(&self.inner);
 
     Box::new(
-      self.run_command()
+      self.inner.run_command()
         .and_then(move |command_output| {
 
-          let pre_string = self_clone.build_pre_string(command_output);
+          let pre_string = inner_clone.build_pre_string(command_output);
 
-          let html_string = self_clone.build_html_string(pre_string);
+          let html_string = inner_clone.build_html_string(pre_string);
 
           Ok(::server::build_response_string(
             StatusCode::OK,
