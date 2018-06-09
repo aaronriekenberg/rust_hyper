@@ -50,7 +50,7 @@ impl RequestLogInfo {
 }
 
 fn log_request_and_response(
-  req_log_info: &RequestLogInfo,
+  req_log_info: RequestLogInfo,
   resp: &Response<Body>) {
 
   let response_status = resp.status().as_u16().to_string();
@@ -187,13 +187,13 @@ impl ThreadedServer {
         .then(move |result| {
           match result {
             Ok(resp) => {
-              log_request_and_response(&req_log_info, &resp);
+              log_request_and_response(req_log_info, &resp);
               Ok(resp)
             },
             Err(e) => {
               warn!("handler error: {}", e);
               let resp = build_response_status(StatusCode::INTERNAL_SERVER_ERROR);
-              log_request_and_response(&req_log_info, &resp);
+              log_request_and_response(req_log_info, &resp);
               Ok(resp)
             }
           }
