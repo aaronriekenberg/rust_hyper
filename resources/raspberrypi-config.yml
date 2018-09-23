@@ -85,6 +85,11 @@ commands:
   command: sudo
   args: [unbound-control, stats_noreset]
 
+- http_path: /unifi_logs
+  description: unifi logs
+  command: sudo
+  args: [tail, -n30, /var/log/unifi/server.log]
+
 - http_path: /uptime
   description: uptime
   command: uptime
