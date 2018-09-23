@@ -77,7 +77,7 @@ pub trait RequestHandler : Send + Sync {
 
 }
 
-pub type RouteConfigurationHandler = Box<RequestHandler>;
+pub type RouteConfigurationHandler = Box<dyn RequestHandler>;
 pub type RouteConfigurationHandlerMap = HashMap<String, RouteConfigurationHandler>;
 
 pub struct RouteConfiguration {
