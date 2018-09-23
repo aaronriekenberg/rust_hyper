@@ -29,6 +29,29 @@ impl CommandInfo {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct ProxyInfo {
+  http_path: String,
+  description: String,
+  url: String
+}
+
+impl ProxyInfo {
+
+  pub fn http_path(&self) -> &String {
+    &self.http_path
+  }
+
+  pub fn description(&self) -> &String {
+    &self.description
+  }
+
+  pub fn url(&self) -> &String {
+    &self.url
+  }
+
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct StaticPathInfo {
   http_path: String,
   fs_path: String,
@@ -74,6 +97,7 @@ pub struct Configuration {
   listen_address: String,
   main_page_info: MainPageInfo,
   commands: Vec<CommandInfo>,
+  proxies: Vec<ProxyInfo>,
   static_paths: Vec<StaticPathInfo>
 }
 
@@ -89,6 +113,10 @@ impl Configuration {
 
   pub fn commands(&self) -> &Vec<CommandInfo> {
     &self.commands
+  }
+
+  pub fn proxies(&self) -> &Vec<ProxyInfo> {
+    &self.proxies
   }
 
   pub fn static_paths(&self) -> &Vec<StaticPathInfo> {

@@ -10,6 +10,12 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 
+pub fn create_proxy_http_client() -> Arc<::hyper::Client<::hyper::client::HttpConnector, ::hyper::Body>> {
+  Arc::new(
+    ::hyper::Client::new()
+  )
+}
+
 #[derive(Debug)]
 pub struct RequestContext {
   req: Request<Body>,

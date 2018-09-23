@@ -51,15 +51,29 @@ impl IndexHandler {
               }
             }
           }
+          @ if config.proxies().len() > 0 {
+            h3 {
+              : "Proxies:"
+            }
+            ul {
+              @ for proxy_info in config.proxies() {
+                li {
+                  a(href = proxy_info.http_path()) {
+                    : proxy_info.description()
+                  }
+                }
+              }
+            }
+          }
           @ if static_paths_to_include.len() > 0 {
             h3 {
               : "Static Paths:"
             }
             ul {
-              @ for static_path in &static_paths_to_include {
+              @ for static_path_info in &static_paths_to_include {
                 li {
-                  a(href = static_path.http_path()) {
-                    : static_path.fs_path()
+                  a(href = static_path_info.http_path()) {
+                    : static_path_info.fs_path()
                   }
                 }
               }

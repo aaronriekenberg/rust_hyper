@@ -40,6 +40,15 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
     path_to_handler.insert(command_info.http_path().clone(), Box::new(handler));
   }
 
+  let proxy_http_client = server::create_proxy_http_client();
+  for proxy_info in config.proxies() {
+    let handler =
+      handlers::proxy::ProxyHandler::new(
+        proxy_info.clone(),
+        std::sync::Arc::clone(&proxy_http_client))?;
+    path_to_handler.insert(proxy_info.http_path().clone(), Box::new(handler));
+  }
+
   for static_path_info in config.static_paths() {
     let handler =
       handlers::static_file::StaticFileHandler::new(
@@ -70,7 +79,6 @@ fn main() {
   info!("config = {:#?}", config);
 
   let listen_addr = config.listen_address().parse().expect("invalid listen_address");
-
 
   let route_configuration = build_route_configuration(&config).expect("failed to build route_configuration");
 

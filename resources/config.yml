@@ -20,6 +20,12 @@ commands:
   command: sleep
   args: [5]
 
+proxies:
+
+- http_path: /test_proxy
+  description: test proxy
+  url: http://www.google.com
+
 static_paths:
 
 - http_path: /style.css
