@@ -12,6 +12,13 @@ use hyper::rt::Stream;
 use std::borrow::Cow;
 use std::sync::Arc;
 
+#[derive(Default)]
+struct ResponseInfo {
+  status: String,
+  headers: String,
+  body: String
+}
+
 struct InnerProxyHandler {
   uri: Uri,
   proxy_info: ::config::ProxyInfo,
@@ -20,33 +27,58 @@ struct InnerProxyHandler {
 
 impl InnerProxyHandler {
 
-  fn fetch_proxy(&self) -> Box<Future<Item=String, Error=::std::io::Error> + Send> {
+  fn fetch_proxy(&self) -> Box<Future<Item=ResponseInfo, Error=::std::io::Error> + Send> {
 
     Box::new(
       self.client.get(self.uri.clone())
         .and_then(|response| {
+          let status = format!("{}", response.status());
+          let headers = format!("{:#?}", response.headers());
           response.into_body().concat2()
-        })
-        .and_then(|body| {
-          Ok(String::from_utf8_lossy(&body).into_owned())
+            .and_then(move |body| {
+              Ok(
+                ResponseInfo {
+                  status,
+                  headers,
+                  body: String::from_utf8_lossy(&body).into_owned()
+                }
+              )
+            })
+            .or_else(move |err| {
+              Ok(
+                ResponseInfo {
+                  body: format!("proxy body error: {}", err),
+                  ..Default::default()
+                }
+              )
+            })
         })
         .or_else(|err| {
-          Ok(format!("proxy error: {}", err))
+          Ok(
+            ResponseInfo { 
+              body: format!("proxy error: {}", err),
+              ..Default::default()
+            }
+          )
         })
       )
   }
 
 
-  fn build_pre_string(&self, proxy_output: String) -> String {
+  fn build_pre_string(&self, response_info: ResponseInfo) -> String {
 
-    let mut pre_string = String::with_capacity(proxy_output.len() + 100);
+    let mut pre_string = String::with_capacity(response_info.headers.len() + response_info.body.len() + 100);
 
     pre_string.push_str("Now: ");
     pre_string.push_str(&::utils::local_time_to_string(Local::now()));
     pre_string.push_str("\n\nGET ");
     pre_string.push_str(&self.proxy_info.url());
+    pre_string.push_str("\n\nResponse Status: ");
+    pre_string.push_str(&response_info.status);
+    pre_string.push_str("\n\nResponse Headers: ");
+    pre_string.push_str(&response_info.headers);
     pre_string.push_str("\n\n");
-    pre_string.push_str(&proxy_output);
+    pre_string.push_str(&response_info.body);
 
     pre_string
   }
@@ -111,9 +143,9 @@ impl ::server::RequestHandler for ProxyHandler {
 
     Box::new(
       self.inner.fetch_proxy()
-        .and_then(move |proxy_output| {
+        .and_then(move |response_info| {
 
-          let pre_string = inner_clone.build_pre_string(proxy_output);
+          let pre_string = inner_clone.build_pre_string(response_info);
 
           let html_string = inner_clone.build_html_string(pre_string);
 
