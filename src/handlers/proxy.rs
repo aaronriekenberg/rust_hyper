@@ -24,13 +24,13 @@ impl InnerProxyHandler {
 
     Box::new(
       self.client.get(self.uri.clone())
-        .and_then(move |response| {
+        .and_then(|response| {
           response.into_body().concat2()
         })
         .and_then(|body| {
           Ok(String::from_utf8_lossy(&body).into_owned())
         })
-        .or_else(move |err| {
+        .or_else(|err| {
           Ok(format!("proxy error: {}", err))
         })
       )
