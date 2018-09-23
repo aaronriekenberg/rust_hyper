@@ -95,6 +95,11 @@ commands:
   command: w
   args: []
 
+proxies:
+- http_path: /coredns_metrics
+  description: coredns metrics
+  url: http://localhost:9153/metrics
+
 static_paths:
 
 - http_path: /style.css
