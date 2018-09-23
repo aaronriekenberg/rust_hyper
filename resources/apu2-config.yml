@@ -10,6 +10,16 @@ commands:
   command: /usr/sbin/arp
   args: [-a, -n]
 
+- http_path: /coredns_log_tail
+  description: coredns log tail
+  command: tail
+  args: [-n, 30, /home/aaron/coredns-run/logs/current]
+
+- http_path: /cpu_vulnerabilities
+  description: cpu vulnerabilities
+  command: /bin/sh
+  args: [-c, grep . /sys/devices/system/cpu/vulnerabilities/*]
+
 - http_path: /dhcp-lease-list
   description: dhcp lease list
   command: /home/aaron/rust-dhcp-leases/target/release/rust-dhcp-leases
@@ -69,16 +79,6 @@ commands:
   description: top
   command: top
   args: [-b, -n1]
-
-- http_path: /unbound_infra
-  description: unbound infra
-  command: sudo
-  args: [/usr/sbin/unbound-control, dump_infra]
-
-- http_path: /unbound_stats
-  description: unbound stats
-  command: sudo
-  args: [/usr/sbin/unbound-control, stats_noreset]
 
 - http_path: /uptime
   description: uptime
