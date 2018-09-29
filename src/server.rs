@@ -6,6 +6,8 @@ use hyper::service::service_fn;
 
 use std::borrow::Cow;
 use std::collections::HashMap;
+use std::error;
+use std::fmt;
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
@@ -87,16 +89,16 @@ impl From<::std::io::Error> for HandlerError {
   }
 }
 
-impl ::std::fmt::Display for HandlerError {
-  fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+impl fmt::Display for HandlerError {
+  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match *self {
-      HandlerError::Hyper(ref e) => ::std::fmt::Display::fmt(e, f),
-      HandlerError::IoError(ref e) => ::std::fmt::Display::fmt(e, f)
+      HandlerError::Hyper(ref e) => fmt::Display::fmt(e, f),
+      HandlerError::IoError(ref e) => fmt::Display::fmt(e, f)
     }
   }
 }
 
-impl ::std::error::Error for HandlerError {
+impl error::Error for HandlerError {
 
   fn description(&self) -> &str {
     match *self {
@@ -105,7 +107,7 @@ impl ::std::error::Error for HandlerError {
     }
 }
 
-  fn cause(&self) -> Option<&::std::error::Error> {
+  fn cause(&self) -> Option<&error::Error> {
     match *self {
       HandlerError::Hyper(ref error) => Some(error),
       HandlerError::IoError(ref error) => Some(error)
@@ -258,7 +260,7 @@ impl ThreadedServer {
 
 fn run_server(
   listen_addr: SocketAddr,
-  threaded_server: ThreadedServer) -> Result<(), Box<::std::error::Error>> {
+  threaded_server: ThreadedServer) -> Result<(), Box<error::Error>> {
 
   let server = Server::bind(&listen_addr)
     .serve(move || {
@@ -280,7 +282,7 @@ fn run_server(
 
 pub fn run_forever(
   listen_addr: SocketAddr,
-  route_configuration: RouteConfiguration) -> Result<(), Box<::std::error::Error>> {
+  route_configuration: RouteConfiguration) -> Result<(), Box<error::Error>> {
 
   let threaded_server = ThreadedServer::new(
     route_configuration);

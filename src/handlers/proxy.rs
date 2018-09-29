@@ -35,22 +35,27 @@ impl InnerProxyHandler {
           let status = format!("{}", response.status());
           let headers = format!("{:#?}", response.headers());
           response.into_body().concat2()
-            .and_then(move |body| {
-              Ok(
-                ResponseInfo {
-                  status,
-                  headers,
-                  body: String::from_utf8_lossy(&body).into_owned()
+            .then(move |result| {
+              match result {
+                Ok(body) => {
+                  Ok(
+                    ResponseInfo {
+                      status,
+                      headers,
+                      body: String::from_utf8_lossy(&body).into_owned()
+                    }
+                  )
+                },
+                Err(e) => {
+                  Ok(
+                    ResponseInfo {
+                      status,
+                      headers,
+                      body: format!("proxy body error: {}", e),
+                    }
+                  )
                 }
-              )
-            })
-            .or_else(move |err| {
-              Ok(
-                ResponseInfo {
-                  body: format!("proxy body error: {}", err),
-                  ..Default::default()
-                }
-              )
+              }
             })
         })
         .or_else(|err| {
