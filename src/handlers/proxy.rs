@@ -148,7 +148,7 @@ impl ::server::RequestHandler for ProxyHandler {
     let http_client = req_context.app_context().http_client();
 
     Box::new(
-      self.inner.fetch_proxy(&http_client)
+      self.inner.fetch_proxy(http_client)
         .and_then(move |response_info| {
 
           let pre_string = inner_clone.build_pre_string(response_info);
