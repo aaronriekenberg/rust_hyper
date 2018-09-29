@@ -1,4 +1,4 @@
-use futures::Future;
+use futures::{future, Future};
 
 use hyper::{Body, Response, Request, Server, StatusCode};
 use hyper::header::{CONTENT_TYPE, HeaderValue};
@@ -12,25 +12,46 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 
-pub fn create_proxy_http_client() -> Arc<::hyper::Client<::hyper::client::HttpConnector, ::hyper::Body>> {
-  Arc::new(
-    ::hyper::Client::new()
-  )
+pub type HyperHttpClient = ::hyper::Client<::hyper::client::HttpConnector, ::hyper::Body>;
+
+pub struct ApplicationContext {
+  http_client: HyperHttpClient
 }
 
-#[derive(Debug)]
+impl ApplicationContext {
+
+  fn new(http_client: HyperHttpClient) -> Self {
+    ApplicationContext {
+      http_client
+    }
+  }
+
+  pub fn http_client(&self) -> &HyperHttpClient {
+    &self.http_client
+  }
+
+}
+
 pub struct RequestContext {
   req: Request<Body>,
+  app_context: Arc<ApplicationContext>,
   start_time: Instant
 }
 
 impl RequestContext {
 
-  fn new(req: Request<Body>) -> Self {
+  fn new(
+    req: Request<Body>,
+    app_context: Arc<ApplicationContext>) -> Self {
     RequestContext {
       req,
+      app_context,
       start_time: Instant::now()
     }
+  }
+
+  pub fn app_context(&self) -> &Arc<ApplicationContext> {
+    &self.app_context
   }
 
 }
@@ -184,6 +205,7 @@ pub fn build_response_string(
 }
 
 struct InnerThreadedServer {
+  application_context: Arc<ApplicationContext>,
   route_configuration: RouteConfiguration
 }
 
@@ -195,11 +217,13 @@ struct ThreadedServer {
 impl ThreadedServer {
 
   fn new(
+    application_context: ApplicationContext,
     route_configuration: RouteConfiguration) -> Self {
 
     ThreadedServer {
       inner: Arc::new(
         InnerThreadedServer {
+          application_context: Arc::new(application_context),
           route_configuration
         }
       )
@@ -212,7 +236,7 @@ impl ThreadedServer {
 
   fn call(&self, req: Request<Body>) -> ResponseFuture {
 
-    let req_context = RequestContext::new(req);
+    let req_context = RequestContext::new(req, Arc::clone(&self.inner.application_context));
 
     let req_log_info = RequestLogInfo::new(&req_context);
 
@@ -245,34 +269,35 @@ impl ThreadedServer {
 
 }
 
-fn run_server(
-  listen_addr: SocketAddr,
-  threaded_server: ThreadedServer) -> Result<(), Box<error::Error>> {
-
-  let server = Server::bind(&listen_addr)
-    .serve(move || {
-      let threaded_server_clone = threaded_server.clone();
-
-      service_fn(move |req: Request<Body>| {
-        threaded_server_clone.call(req)
-      })
-
-    })
-    .map_err(|e| warn!("serve error: {}", e));
-
-  info!("Listening on http://{}", listen_addr);
-
-  ::hyper::rt::run(server);
-
-  Err(From::from("run_server exiting"))
-}
-
 pub fn run_forever(
   listen_addr: SocketAddr,
   route_configuration: RouteConfiguration) -> Result<(), Box<error::Error>> {
 
-  let threaded_server = ThreadedServer::new(
-    route_configuration);
+  ::hyper::rt::run(future::lazy(move || {
 
-  run_server(listen_addr, threaded_server)
+    let http_client = HyperHttpClient::new();
+
+    let application_context = ApplicationContext::new(http_client);
+
+    let threaded_server = ThreadedServer::new(
+      application_context,
+      route_configuration);
+
+    let server = Server::bind(&listen_addr)
+      .serve(move || {
+        let threaded_server_clone = threaded_server.clone();
+
+        service_fn(move |req: Request<Body>| {
+          threaded_server_clone.call(req)
+        })
+
+    })
+    .map_err(|e| warn!("serve error: {}", e));
+
+    info!("Listening on http://{}", listen_addr);
+
+    server
+  }));
+
+  Err(From::from("run_forever exiting"))
 }

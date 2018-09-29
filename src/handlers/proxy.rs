@@ -5,8 +5,7 @@ use futures::Future;
 use horrorshow::helper::doctype;
 use horrorshow::Template;
 
-use hyper::{Body, Client, StatusCode, Uri};
-use hyper::client::HttpConnector;
+use hyper::{StatusCode, Uri};
 use hyper::rt::Stream;
 
 use std::borrow::Cow;
@@ -21,16 +20,18 @@ struct ResponseInfo {
 
 struct InnerProxyHandler {
   uri: Uri,
-  proxy_info: ::config::ProxyInfo,
-  client: Arc<Client<HttpConnector, Body>>
+  proxy_info: ::config::ProxyInfo
 }
 
 impl InnerProxyHandler {
 
-  fn fetch_proxy(&self) -> Box<Future<Item=ResponseInfo, Error=::server::HandlerError> + Send> {
+  fn fetch_proxy(
+    &self,
+    http_client: &::server::HyperHttpClient) ->
+      Box<Future<Item=ResponseInfo, Error=::server::HandlerError> + Send> {
 
     Box::new(
-      self.client.get(self.uri.clone())
+      http_client.get(self.uri.clone())
         .and_then(|response| {
           let status = format!("{}", response.status());
           let headers = format!("{:#?}", response.headers());
@@ -122,8 +123,7 @@ pub struct ProxyHandler {
 impl ProxyHandler {
 
   pub fn new(
-    proxy_info: ::config::ProxyInfo,
-    proxy_http_client: Arc<Client<HttpConnector, Body>>) -> Result<Self, Box<::std::error::Error>> {
+    proxy_info: ::config::ProxyInfo) -> Result<Self, Box<::std::error::Error>> {
 
     let uri = proxy_info.url().parse()?;
 
@@ -131,8 +131,7 @@ impl ProxyHandler {
       inner: Arc::new(
         InnerProxyHandler {
           uri,
-          proxy_info,
-          client: proxy_http_client
+          proxy_info
         }
       )
     })
@@ -142,12 +141,14 @@ impl ProxyHandler {
 
 impl ::server::RequestHandler for ProxyHandler {
 
-  fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
+  fn handle(&self, req_context: &::server::RequestContext) -> ::server::ResponseFuture {
 
     let inner_clone = Arc::clone(&self.inner);
 
+    let http_client = req_context.app_context().http_client();
+
     Box::new(
-      self.inner.fetch_proxy()
+      self.inner.fetch_proxy(&http_client)
         .and_then(move |response_info| {
 
           let pre_string = inner_clone.build_pre_string(response_info);
