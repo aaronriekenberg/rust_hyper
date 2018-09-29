@@ -2,7 +2,7 @@
 
 List web-app in Rust to monitor output from commands on a Raspberry Pi.  Mostly an exercise to learn rust.
 
-Using [hyper](https://crates.io/crates/hyper), [futures_cpupool](https://crates.io/crates/futures-cpupool), [serde](https://crates.io/crates/serde), [horrorshow](https://crates.io/crates/horrorshow).
+Using [hyper](https://crates.io/crates/hyper), [serde](https://crates.io/crates/serde), [horrorshow](https://crates.io/crates/horrorshow).
 
 ## Packages
 
@@ -14,4 +14,5 @@ Using [hyper](https://crates.io/crates/hyper), [futures_cpupool](https://crates.
 - handlers/command - http handler to execute a command and convert output from the command to html
 - handlers/index - http handler to display index page
 - handlers/not_found - http handler for unknown route
+- handlers/proxy - http handler to make http proxy call and display result
 - handlers/static_file - http handler to return a static file
