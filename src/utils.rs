@@ -1,5 +1,4 @@
-use chrono::prelude::Local;
-use chrono::{DateTime, TimeZone};
+use chrono::prelude::{DateTime, Local, TimeZone, Utc};
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -14,6 +13,17 @@ pub fn system_time_to_local(st: &SystemTime) -> DateTime<Local> {
     },
     Err(_) => {
       Local.timestamp(0, 0)
+    }
+  }
+}
+
+pub fn system_time_to_utc(st: &SystemTime) -> DateTime<Utc> {
+  match st.duration_since(UNIX_EPOCH) {
+    Ok(dur) => {
+      Utc.timestamp(dur.as_secs() as i64, dur.subsec_nanos())
+    },
+    Err(_) => {
+      Utc.timestamp(0, 0)
     }
   }
 }

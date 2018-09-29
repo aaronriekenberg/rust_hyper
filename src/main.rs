@@ -54,7 +54,8 @@ fn build_route_configuration(config: &config::Configuration) -> Result<server::R
     let handler =
       handlers::static_file::StaticFileHandler::new(
         static_path_info.fs_path().clone(),
-        static_path_info.content_type())?;
+        static_path_info.content_type(),
+        static_path_info.cache_control())?;
     path_to_handler.insert(static_path_info.http_path().clone(), Box::new(handler));
   }
 

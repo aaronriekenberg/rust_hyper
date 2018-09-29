@@ -183,19 +183,6 @@ pub fn build_response_string(
     .unwrap()
 }
 
-pub fn build_response_vec(
-  status_code: StatusCode,
-  body: Vec<u8>,
-  content_type: HeaderValue) -> Response<Body> {
-
-  Response::builder()
-    .status(status_code)
-    .header(CONTENT_TYPE, content_type)
-    .body(From::from(body))
-    .unwrap()
-}
-
-
 struct InnerThreadedServer {
   route_configuration: RouteConfiguration
 }

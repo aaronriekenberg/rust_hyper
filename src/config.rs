@@ -56,6 +56,7 @@ pub struct StaticPathInfo {
   http_path: String,
   fs_path: String,
   content_type: String,
+  cache_control: String,
   include_in_main_page: bool
 }
 
@@ -71,6 +72,10 @@ impl StaticPathInfo {
 
   pub fn content_type(&self) -> &String {
     &self.content_type
+  }
+
+  pub fn cache_control(&self) -> &String {
+    &self.cache_control
   }
 
   pub fn include_in_main_page(&self) -> bool {

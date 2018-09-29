@@ -105,34 +105,41 @@ static_paths:
 - http_path: /style.css
   fs_path: style.css
   content_type: text/css
+  cache_control: max-age=60
   include_in_main_page: false
 
 - http_path: /vnstat.html
   fs_path: /home/aaron/vnstat/index.html
   content_type: text/html
+  cache_control: max-age=60
   include_in_main_page: true
 
 - http_path: /vnstat_summary.png
   fs_path: /home/aaron/vnstat/vnstat_summary.png
   content_type: image/png
+  cache_control: max-age=60
   include_in_main_page: false
 
 - http_path: /vnstat_hours.png
   fs_path: /home/aaron/vnstat/vnstat_hours.png
   content_type: image/png
+  cache_control: max-age=60
   include_in_main_page: false
 
 - http_path: /vnstat_days.png
   fs_path: /home/aaron/vnstat/vnstat_days.png
   content_type: image/png
+  cache_control: max-age=60
   include_in_main_page: false
 
 - http_path: /vnstat_months.png
   fs_path: /home/aaron/vnstat/vnstat_months.png
   content_type: image/png
+  cache_control: max-age=60
   include_in_main_page: false
 
 - http_path: /vnstat_top10.png
   fs_path: /home/aaron/vnstat/vnstat_top10.png
   content_type: image/png
+  cache_control: max-age=60
   include_in_main_page: false

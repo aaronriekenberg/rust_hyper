@@ -112,9 +112,11 @@ static_paths:
 - http_path: /style.css
   fs_path: style.css
   content_type: text/css
+  cache_control: max-age=60
   include_in_main_page: false
 
 - http_path: /favicon.ico
   fs_path: raspberrypi-favicon.ico
   content_type: image/x-icon
+  cache_control: max-age=60
   include_in_main_page: false
