@@ -217,13 +217,13 @@ struct ThreadedServer {
 impl ThreadedServer {
 
   fn new(
-    application_context: ApplicationContext,
+    application_context: Arc<ApplicationContext>,
     route_configuration: RouteConfiguration) -> Self {
 
     ThreadedServer {
       inner: Arc::new(
         InnerThreadedServer {
-          application_context: Arc::new(application_context),
+          application_context,
           route_configuration
         }
       )
@@ -277,7 +277,9 @@ pub fn run_forever(
 
     let http_client = HyperHttpClient::new();
 
-    let application_context = ApplicationContext::new(http_client);
+    let application_context = Arc::new(
+      ApplicationContext::new(
+        http_client));
 
     let threaded_server = ThreadedServer::new(
       application_context,
