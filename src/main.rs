@@ -3,7 +3,6 @@ extern crate hyper;
 #[macro_use] extern crate horrorshow;
 extern crate fern;
 extern crate futures;
-extern crate http;
 #[macro_use] extern crate log;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
