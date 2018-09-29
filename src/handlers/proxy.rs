@@ -27,7 +27,7 @@ struct InnerProxyHandler {
 
 impl InnerProxyHandler {
 
-  fn fetch_proxy(&self) -> Box<Future<Item=ResponseInfo, Error=::std::io::Error> + Send> {
+  fn fetch_proxy(&self) -> Box<Future<Item=ResponseInfo, Error=::server::HandlerError> + Send> {
 
     Box::new(
       self.client.get(self.uri.clone())

@@ -69,7 +69,52 @@ fn log_request_and_response(
         duration);
 }
 
-pub type ResponseFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=::std::io::Error> + Send>;
+#[derive(Debug)]
+pub enum HandlerError {
+  Hyper(::hyper::Error),
+  IoError(::std::io::Error)
+}
+
+impl From<::hyper::Error> for HandlerError {
+  fn from(err: ::hyper::Error) -> HandlerError {
+    HandlerError::Hyper(err)
+  }
+}
+
+impl From<::std::io::Error> for HandlerError {
+  fn from(err: ::std::io::Error) -> HandlerError {
+    HandlerError::IoError(err)
+  }
+}
+
+impl ::std::fmt::Display for HandlerError {
+  fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    match *self {
+      HandlerError::Hyper(ref e) => ::std::fmt::Display::fmt(e, f),
+      HandlerError::IoError(ref e) => ::std::fmt::Display::fmt(e, f)
+    }
+  }
+}
+
+impl ::std::error::Error for HandlerError {
+
+  fn description(&self) -> &str {
+    match *self {
+      HandlerError::Hyper(_) => "Hyper Error",
+      HandlerError::IoError(_) => "IO Error"
+    }
+}
+
+  fn cause(&self) -> Option<&::std::error::Error> {
+    match *self {
+      HandlerError::Hyper(ref error) => Some(error),
+      HandlerError::IoError(ref error) => Some(error)
+    }
+  }
+
+}
+
+pub type ResponseFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=HandlerError> + Send>;
 
 pub trait RequestHandler : Send + Sync {
 
@@ -197,7 +242,10 @@ impl ThreadedServer {
               Ok(resp)
             },
             Err(e) => {
-              warn!("handler error: {}", e);
+              match e {
+                HandlerError::Hyper(e) => warn!("hyper handler error: {}", e),
+                HandlerError::IoError(e) => warn!("io handler error: {}", e)
+              }
               let resp = build_response_status(StatusCode::INTERNAL_SERVER_ERROR);
               log_request_and_response(req_log_info, &resp);
               Ok(resp)
@@ -221,7 +269,7 @@ fn run_server(
       })
 
     })
-    .map_err(|e| warn!("server error: {}", e));
+    .map_err(|e| warn!("serve error: {}", e));
 
   info!("Listening on http://{}", listen_addr);
 

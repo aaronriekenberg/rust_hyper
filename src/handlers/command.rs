@@ -20,7 +20,7 @@ struct InnerCommandHandler {
 
 impl InnerCommandHandler {
 
-  fn run_command(&self) -> Box<Future<Item=String, Error=::std::io::Error> + Send> {
+  fn run_command(&self) -> Box<Future<Item=String, Error=::server::HandlerError> + Send> {
 
     let mut command = Command::new(self.command_info.command());
 
