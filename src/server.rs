@@ -1,8 +1,8 @@
 use futures::{future, Future};
 
-use hyper::{Body, Response, Request, Server, StatusCode};
-use hyper::header::{CONTENT_TYPE, HeaderValue};
+use hyper::header::{HeaderValue, CONTENT_TYPE};
 use hyper::service::service_fn;
+use hyper::{Body, Request, Response, Server, StatusCode};
 
 use std::borrow::Cow;
 use std::collections::HashMap;
@@ -15,291 +15,256 @@ use std::time::Instant;
 pub type HyperHttpClient = ::hyper::Client<::hyper::client::HttpConnector, ::hyper::Body>;
 
 pub struct ApplicationContext {
-  http_client: HyperHttpClient
+    http_client: HyperHttpClient,
 }
 
 impl ApplicationContext {
-
-  fn new(http_client: HyperHttpClient) -> Self {
-    ApplicationContext {
-      http_client
+    fn new(http_client: HyperHttpClient) -> Self {
+        ApplicationContext { http_client }
     }
-  }
 
-  pub fn http_client(&self) -> &HyperHttpClient {
-    &self.http_client
-  }
-
+    pub fn http_client(&self) -> &HyperHttpClient {
+        &self.http_client
+    }
 }
 
 pub struct RequestContext {
-  req: Request<Body>,
-  app_context: Arc<ApplicationContext>,
-  start_time: Instant
+    req: Request<Body>,
+    app_context: Arc<ApplicationContext>,
+    start_time: Instant,
 }
 
 impl RequestContext {
-
-  fn new(
-    req: Request<Body>,
-    app_context: Arc<ApplicationContext>) -> Self {
-    RequestContext {
-      req,
-      app_context,
-      start_time: Instant::now()
+    fn new(req: Request<Body>, app_context: Arc<ApplicationContext>) -> Self {
+        RequestContext {
+            req,
+            app_context,
+            start_time: Instant::now(),
+        }
     }
-  }
 
-  pub fn app_context(&self) -> &Arc<ApplicationContext> {
-    &self.app_context
-  }
-
+    pub fn app_context(&self) -> &Arc<ApplicationContext> {
+        &self.app_context
+    }
 }
 
 struct RequestLogInfo {
-  start_time: Instant,
-  method: String,
-  uri: String,
-  version: String
+    start_time: Instant,
+    method: String,
+    uri: String,
+    version: String,
 }
 
 impl RequestLogInfo {
+    fn new(req_context: &RequestContext) -> Self {
+        let req = &req_context.req;
 
-  fn new(req_context: &RequestContext) -> Self {
-    let req = &req_context.req;
-
-    RequestLogInfo {
-      start_time: req_context.start_time,
-      method: req.method().to_string(),
-      uri: req.uri().to_string(),
-      version: format!("{:?}", req.version())
+        RequestLogInfo {
+            start_time: req_context.start_time,
+            method: req.method().to_string(),
+            uri: req.uri().to_string(),
+            version: format!("{:?}", req.version()),
+        }
     }
-  }
-
 }
 
-fn log_request_and_response(
-  req_log_info: RequestLogInfo,
-  resp: &Response<Body>) {
+fn log_request_and_response(req_log_info: RequestLogInfo, resp: &Response<Body>) {
+    let response_status = resp.status().as_u16().to_string();
 
-  let response_status = resp.status().as_u16().to_string();
+    let duration = ::utils::duration_in_seconds_f64(&req_log_info.start_time.elapsed());
 
-  let duration = ::utils::duration_in_seconds_f64(&req_log_info.start_time.elapsed());
-
-  info!("\"{} {} {}\" {} {:.9}s",
-        req_log_info.method, req_log_info.uri, req_log_info.version,
-        response_status,
-        duration);
+    info!(
+        "\"{} {} {}\" {} {:.9}s",
+        req_log_info.method, req_log_info.uri, req_log_info.version, response_status, duration
+    );
 }
 
 #[derive(Debug)]
 pub enum HandlerError {
-  Hyper(::hyper::Error),
-  IoError(::std::io::Error)
+    Hyper(::hyper::Error),
+    IoError(::std::io::Error),
 }
 
 impl From<::hyper::Error> for HandlerError {
-  fn from(err: ::hyper::Error) -> HandlerError {
-    HandlerError::Hyper(err)
-  }
+    fn from(err: ::hyper::Error) -> HandlerError {
+        HandlerError::Hyper(err)
+    }
 }
 
 impl From<::std::io::Error> for HandlerError {
-  fn from(err: ::std::io::Error) -> HandlerError {
-    HandlerError::IoError(err)
-  }
+    fn from(err: ::std::io::Error) -> HandlerError {
+        HandlerError::IoError(err)
+    }
 }
 
 impl fmt::Display for HandlerError {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    match *self {
-      HandlerError::Hyper(ref e) => fmt::Display::fmt(e, f),
-      HandlerError::IoError(ref e) => fmt::Display::fmt(e, f)
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match *self {
+            HandlerError::Hyper(ref e) => fmt::Display::fmt(e, f),
+            HandlerError::IoError(ref e) => fmt::Display::fmt(e, f),
+        }
     }
-  }
 }
 
 impl error::Error for HandlerError {
-
-  fn description(&self) -> &str {
-    match *self {
-      HandlerError::Hyper(_) => "Hyper Error",
-      HandlerError::IoError(_) => "IO Error"
+    fn description(&self) -> &str {
+        match *self {
+            HandlerError::Hyper(_) => "Hyper Error",
+            HandlerError::IoError(_) => "IO Error",
+        }
     }
-  }
 
-  fn cause(&self) -> Option<&error::Error> {
-    match *self {
-      HandlerError::Hyper(ref error) => Some(error),
-      HandlerError::IoError(ref error) => Some(error)
+    fn cause(&self) -> Option<&error::Error> {
+        match *self {
+            HandlerError::Hyper(ref error) => Some(error),
+            HandlerError::IoError(ref error) => Some(error),
+        }
     }
-  }
-
 }
 
-pub type ResponseFuture = Box<Future<Item=::hyper::Response<::hyper::Body>, Error=HandlerError> + Send>;
+pub type ResponseFuture =
+    Box<Future<Item = ::hyper::Response<::hyper::Body>, Error = HandlerError> + Send>;
 
-pub trait RequestHandler : Send + Sync {
-
-  fn handle(&self, req_context: &RequestContext) -> ResponseFuture;
-
+pub trait RequestHandler: Send + Sync {
+    fn handle(&self, req_context: &RequestContext) -> ResponseFuture;
 }
 
 pub type RouteConfigurationHandler = Box<dyn RequestHandler>;
 pub type RouteConfigurationHandlerMap = HashMap<String, RouteConfigurationHandler>;
 
 pub struct RouteConfiguration {
-  path_to_handler: RouteConfigurationHandlerMap,
-  not_found_handler: RouteConfigurationHandler
+    path_to_handler: RouteConfigurationHandlerMap,
+    not_found_handler: RouteConfigurationHandler,
 }
 
 impl RouteConfiguration {
-
-  pub fn new(
-    path_to_handler: RouteConfigurationHandlerMap,
-    not_found_handler: RouteConfigurationHandler) -> Self {
-    RouteConfiguration {
-      path_to_handler,
-      not_found_handler
+    pub fn new(
+        path_to_handler: RouteConfigurationHandlerMap,
+        not_found_handler: RouteConfigurationHandler,
+    ) -> Self {
+        RouteConfiguration {
+            path_to_handler,
+            not_found_handler,
+        }
     }
-  }
 
-  pub fn path_to_handler(&self) -> &RouteConfigurationHandlerMap {
-    &self.path_to_handler
-  }
+    pub fn path_to_handler(&self) -> &RouteConfigurationHandlerMap {
+        &self.path_to_handler
+    }
 
-  pub fn not_found_handler(&self) -> &RouteConfigurationHandler {
-    &self.not_found_handler
-  }
-
+    pub fn not_found_handler(&self) -> &RouteConfigurationHandler {
+        &self.not_found_handler
+    }
 }
 
 pub fn text_plain_content_type_header_value() -> HeaderValue {
-  HeaderValue::from_static("text/plain")
+    HeaderValue::from_static("text/plain")
 }
 
 pub fn text_html_content_type_header_value() -> HeaderValue {
-  HeaderValue::from_static("text/html")
+    HeaderValue::from_static("text/html")
 }
 
-pub fn build_response_status(
-  status_code: StatusCode) -> Response<Body> {
-
-  Response::builder()
-    .status(status_code)
-    .body(Body::empty())
-    .unwrap()
-
+pub fn build_response_status(status_code: StatusCode) -> Response<Body> {
+    Response::builder()
+        .status(status_code)
+        .body(Body::empty())
+        .unwrap()
 }
 
 pub fn build_response_string(
-  status_code: StatusCode,
-  body: Cow<'static, str>,
-  content_type: HeaderValue) -> Response<Body> {
-
-  Response::builder()
-    .status(status_code)
-    .header(CONTENT_TYPE, content_type)
-    .body(From::from(body))
-    .unwrap()
+    status_code: StatusCode,
+    body: Cow<'static, str>,
+    content_type: HeaderValue,
+) -> Response<Body> {
+    Response::builder()
+        .status(status_code)
+        .header(CONTENT_TYPE, content_type)
+        .body(From::from(body))
+        .unwrap()
 }
 
 struct InnerThreadedServer {
-  application_context: Arc<ApplicationContext>,
-  route_configuration: RouteConfiguration
+    application_context: Arc<ApplicationContext>,
+    route_configuration: RouteConfiguration,
 }
 
 #[derive(Clone)]
 struct ThreadedServer {
-  inner: Arc<InnerThreadedServer>
+    inner: Arc<InnerThreadedServer>,
 }
 
 impl ThreadedServer {
-
-  fn new(
-    application_context: Arc<ApplicationContext>,
-    route_configuration: RouteConfiguration) -> Self {
-
-    ThreadedServer {
-      inner: Arc::new(
-        InnerThreadedServer {
-          application_context,
-          route_configuration
+    fn new(
+        application_context: Arc<ApplicationContext>,
+        route_configuration: RouteConfiguration,
+    ) -> Self {
+        ThreadedServer {
+            inner: Arc::new(InnerThreadedServer {
+                application_context,
+                route_configuration,
+            }),
         }
-      )
     }
-  }
-
 }
 
 impl ThreadedServer {
+    fn call(&self, req: Request<Body>) -> ResponseFuture {
+        let req_context = RequestContext::new(req, Arc::clone(&self.inner.application_context));
 
-  fn call(&self, req: Request<Body>) -> ResponseFuture {
+        let req_log_info = RequestLogInfo::new(&req_context);
 
-    let req_context = RequestContext::new(req, Arc::clone(&self.inner.application_context));
+        let route_configuration = &self.inner.route_configuration;
 
-    let req_log_info = RequestLogInfo::new(&req_context);
+        let handler = route_configuration
+            .path_to_handler()
+            .get(req_context.req.uri().path())
+            .unwrap_or(route_configuration.not_found_handler());
 
-    let route_configuration = &self.inner.route_configuration;
-
-    let handler = route_configuration.path_to_handler()
-      .get(req_context.req.uri().path())
-      .unwrap_or(route_configuration.not_found_handler());
-
-    Box::new(
-      handler.handle(&req_context)
-        .then(move |result| {
-          match result {
-            Ok(resp) => {
-              log_request_and_response(req_log_info, &resp);
-              Ok(resp)
-            },
-            Err(e) => {
-              match e {
-                HandlerError::Hyper(e) => warn!("hyper handler error: {}", e),
-                HandlerError::IoError(e) => warn!("io handler error: {}", e)
-              }
-              let resp = build_response_status(StatusCode::INTERNAL_SERVER_ERROR);
-              log_request_and_response(req_log_info, &resp);
-              Ok(resp)
-            }
-          }
-        }))
-  }
-
+        Box::new(
+            handler
+                .handle(&req_context)
+                .then(move |result| match result {
+                    Ok(resp) => {
+                        log_request_and_response(req_log_info, &resp);
+                        Ok(resp)
+                    }
+                    Err(e) => {
+                        match e {
+                            HandlerError::Hyper(e) => warn!("hyper handler error: {}", e),
+                            HandlerError::IoError(e) => warn!("io handler error: {}", e),
+                        }
+                        let resp = build_response_status(StatusCode::INTERNAL_SERVER_ERROR);
+                        log_request_and_response(req_log_info, &resp);
+                        Ok(resp)
+                    }
+                }),
+        )
+    }
 }
 
 pub fn run_forever(
-  listen_addr: SocketAddr,
-  route_configuration: RouteConfiguration) -> Result<(), Box<error::Error>> {
+    listen_addr: SocketAddr,
+    route_configuration: RouteConfiguration,
+) -> Result<(), Box<error::Error>> {
+    ::hyper::rt::run(future::lazy(move || {
+        let http_client = HyperHttpClient::new();
 
-  ::hyper::rt::run(future::lazy(move || {
+        let application_context = Arc::new(ApplicationContext::new(http_client));
 
-    let http_client = HyperHttpClient::new();
+        let threaded_server = ThreadedServer::new(application_context, route_configuration);
 
-    let application_context = Arc::new(
-      ApplicationContext::new(
-        http_client));
+        let server = Server::bind(&listen_addr)
+            .serve(move || {
+                let threaded_server_clone = threaded_server.clone();
 
-    let threaded_server = ThreadedServer::new(
-      application_context,
-      route_configuration);
+                service_fn(move |req: Request<Body>| threaded_server_clone.call(req))
+            }).map_err(|e| warn!("serve error: {}", e));
 
-    let server = Server::bind(&listen_addr)
-      .serve(move || {
-        let threaded_server_clone = threaded_server.clone();
+        info!("Listening on http://{}", listen_addr);
 
-        service_fn(move |req: Request<Body>| {
-          threaded_server_clone.call(req)
-        })
+        server
+    }));
 
-    })
-    .map_err(|e| warn!("serve error: {}", e));
-
-    info!("Listening on http://{}", listen_addr);
-
-    server
-  }));
-
-  Err(From::from("run_forever exiting"))
+    Err(From::from("run_forever exiting"))
 }
