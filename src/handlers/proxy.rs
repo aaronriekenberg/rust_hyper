@@ -13,6 +13,7 @@ use std::sync::Arc;
 
 #[derive(Default)]
 struct ResponseInfo {
+    version: String,
     status: String,
     headers: String,
     body: String,
@@ -32,6 +33,7 @@ impl InnerProxyHandler {
             http_client
                 .get(self.uri.clone())
                 .and_then(|response| {
+                    let version = format!("{:?}", response.version());
                     let status = format!("{}", response.status());
                     let headers = format!("{:#?}", response.headers());
                     response
@@ -39,11 +41,13 @@ impl InnerProxyHandler {
                         .concat2()
                         .then(move |result| match result {
                             Ok(body) => Ok(ResponseInfo {
+                                version,
                                 status,
                                 headers,
                                 body: String::from_utf8_lossy(&body).into_owned(),
                             }),
                             Err(e) => Ok(ResponseInfo {
+                                version,
                                 status,
                                 headers,
                                 body: format!("proxy body error: {}", e),
@@ -67,6 +71,8 @@ impl InnerProxyHandler {
         pre_string.push_str("\n\nGET ");
         pre_string.push_str(&self.proxy_info.url());
         pre_string.push_str("\n\nResponse Status: ");
+        pre_string.push_str(&response_info.version);
+        pre_string.push_str(" ");
         pre_string.push_str(&response_info.status);
         pre_string.push_str("\n\nResponse Headers: ");
         pre_string.push_str(&response_info.headers);
