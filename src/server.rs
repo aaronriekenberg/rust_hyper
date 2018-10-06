@@ -126,7 +126,7 @@ impl error::Error for HandlerError {
       HandlerError::Hyper(_) => "Hyper Error",
       HandlerError::IoError(_) => "IO Error"
     }
-}
+  }
 
   fn cause(&self) -> Option<&error::Error> {
     match *self {
