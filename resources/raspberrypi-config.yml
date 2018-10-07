@@ -10,10 +10,15 @@ commands:
   command: /usr/sbin/arp
   args: [-a, -n]
 
-- http_path: /dhcp-lease-list
-  description: dhcp lease list
-  command: /home/pi/rust-dhcp-leases/target/release/rust-dhcp-leases
-  args: []
+- http_path: /apt_list_upgradable
+  description: apt list ugpradable
+  command: /usr/bin/apt
+  args: [list, --upgradable]
+
+- http_path: /df
+  description: df
+  command: df
+  args: [-h]
 
 - http_path: /dmesg
   description: dmesg
@@ -74,16 +79,6 @@ commands:
   description: top
   command: top
   args: [-b, -n1]
-
-- http_path: /unbound_infra
-  description: unbound infra
-  command: sudo
-  args: [unbound-control, dump_infra]
-
-- http_path: /unbound_stats
-  description: unbound stats
-  command: sudo
-  args: [unbound-control, stats_noreset]
 
 - http_path: /unifi_logs
   description: unifi logs

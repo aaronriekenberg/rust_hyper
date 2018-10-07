@@ -10,6 +10,11 @@ commands:
   command: /usr/sbin/arp
   args: [-a, -n]
 
+- http_path: /apt_list_upgradable
+  description: apt list ugpradable
+  command: /usr/bin/apt
+  args: [list, --upgradable]
+
 - http_path: /coredns_log_tail
   description: coredns log tail
   command: tail
@@ -19,6 +24,11 @@ commands:
   description: cpu vulnerabilities
   command: /bin/sh
   args: [-c, grep . /sys/devices/system/cpu/vulnerabilities/*]
+
+- http_path: /df
+  description: df
+  command: df
+  args: [-h]
 
 - http_path: /dhcp-lease-list
   description: dhcp lease list
