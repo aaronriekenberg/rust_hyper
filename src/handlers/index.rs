@@ -6,7 +6,6 @@ use horrorshow::Template;
 use hyper::StatusCode;
 
 use std::borrow::Cow;
-use std::time::SystemTime;
 
 pub struct IndexHandler {
     index_string: String,
@@ -20,13 +19,9 @@ impl IndexHandler {
             .filter(|s| s.include_in_main_page())
             .collect();
 
-        let now = SystemTime::now();
-
         let mut last_modified_string = String::new();
         last_modified_string.push_str("Last Modified: ");
-        last_modified_string.push_str(&::utils::local_time_to_string(
-            ::utils::system_time_to_local(&now),
-        ));
+        last_modified_string.push_str(&::utils::local_time_now_to_string());
 
         let s = html! {
           : doctype::HTML;

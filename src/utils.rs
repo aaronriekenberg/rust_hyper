@@ -2,15 +2,12 @@ use chrono::prelude::{DateTime, Local, TimeZone, Utc};
 
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-pub fn local_time_to_string(dt: DateTime<Local>) -> String {
-    dt.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
+pub fn local_time_now_to_string() -> String {
+    local_time_to_string(Local::now())
 }
 
-pub fn system_time_to_local(st: &SystemTime) -> DateTime<Local> {
-    match st.duration_since(UNIX_EPOCH) {
-        Ok(dur) => Local.timestamp(dur.as_secs() as i64, dur.subsec_nanos()),
-        Err(_) => Local.timestamp(0, 0),
-    }
+pub fn local_time_to_string(dt: DateTime<Local>) -> String {
+    dt.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
 }
 
 pub fn system_time_to_utc(st: &SystemTime) -> DateTime<Utc> {

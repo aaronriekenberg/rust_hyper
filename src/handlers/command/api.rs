@@ -1,5 +1,3 @@
-use chrono::prelude::Local;
-
 use futures::Future;
 
 use hyper::StatusCode;
@@ -72,7 +70,7 @@ impl ::server::RequestHandler for APIHandler {
 
         Box::new(self.inner.run_command().and_then(move |command_output| {
             let api_response = APIResponse {
-                now: ::utils::local_time_to_string(Local::now()),
+                now: ::utils::local_time_now_to_string(),
                 command_line: inner_clone.command_line_string.clone(),
                 output: command_output,
             };

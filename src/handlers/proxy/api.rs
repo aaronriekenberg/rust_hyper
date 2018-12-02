@@ -1,5 +1,3 @@
-use chrono::prelude::Local;
-
 use futures::Future;
 
 use hyper::rt::Stream;
@@ -95,7 +93,7 @@ impl ::server::RequestHandler for APIHandler {
                 .fetch_proxy(http_client)
                 .and_then(move |response_info| {
                     let api_response = APIResponse {
-                        now: ::utils::local_time_to_string(Local::now()),
+                        now: ::utils::local_time_now_to_string(),
                         method: "GET".to_string(),
                         url: inner_clone.uri.to_string(),
                         version: response_info.version,
