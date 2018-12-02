@@ -16,7 +16,7 @@ xRequest.onreadystatechange = function () {
         const responseObject = JSON.parse(xRequest.responseText);
         let preText = `Now: ${responseObject.now}\n\n`;
         preText += `${responseObject.method} ${responseObject.url}\n\n`;
-        preText += `Response Status: HTTP/${responseObject.version} ${responseObject.status}\n\n`;
+        preText += `Response Status: ${responseObject.version} ${responseObject.status}\n\n`;
         preText += `Response Headers:\n${responseObject.headers}\n\n`;
         preText += responseObject.body;
         updatePre(preText);
