@@ -2,15 +2,20 @@ use std::io::Read;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CommandInfo {
-    http_path: String,
+    api_path: String,
+    html_path: String,
     description: String,
     command: String,
     args: Vec<String>,
 }
 
 impl CommandInfo {
-    pub fn http_path(&self) -> &String {
-        &self.http_path
+    pub fn api_path(&self) -> &String {
+        &self.api_path
+    }
+
+    pub fn html_path(&self) -> &String {
+        &self.html_path
     }
 
     pub fn description(&self) -> &String {
@@ -28,14 +33,19 @@ impl CommandInfo {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct ProxyInfo {
-    http_path: String,
+    api_path: String,
+    html_path: String,
     description: String,
     url: String,
 }
 
 impl ProxyInfo {
-    pub fn http_path(&self) -> &String {
-        &self.http_path
+    pub fn api_path(&self) -> &String {
+        &self.api_path
+    }
+
+    pub fn html_path(&self) -> &String {
+        &self.html_path
     }
 
     pub fn description(&self) -> &String {
@@ -129,7 +139,7 @@ pub fn read_config(config_file: String) -> Result<Configuration, Box<::std::erro
 
     file.read_to_string(&mut file_contents)?;
 
-    let configuration: Configuration = ::serde_yaml::from_str(&file_contents)?;
+    let configuration: Configuration = ::serde_json::from_str(&file_contents)?;
 
     Ok(configuration)
 }

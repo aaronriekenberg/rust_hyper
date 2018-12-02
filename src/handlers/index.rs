@@ -34,7 +34,7 @@ impl IndexHandler {
             head {
               title: config.main_page_info().title();
               meta(name = "viewport", content = "width=device, initial-scale=1");
-              link(rel = "stylesheet", type = "text/css", href = "style.css");
+              link(rel = "stylesheet", type = "text/css", href = "/style.css");
             }
             body {
               h2 {
@@ -47,7 +47,7 @@ impl IndexHandler {
                 ul {
                   @ for command_info in config.commands() {
                     li {
-                      a(href = command_info.http_path()) {
+                      a(href = command_info.html_path()) {
                         : command_info.description()
                       }
                     }
@@ -61,7 +61,7 @@ impl IndexHandler {
                 ul {
                   @ for proxy_info in config.proxies() {
                     li {
-                      a(href = proxy_info.http_path()) {
+                      a(href = proxy_info.html_path()) {
                         : proxy_info.description()
                       }
                     }

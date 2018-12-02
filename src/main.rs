@@ -8,7 +8,7 @@ extern crate futures;
 extern crate log;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_yaml;
+extern crate serde_json;
 extern crate tokio_fs;
 extern crate tokio_io;
 extern crate tokio_process;
@@ -37,13 +37,19 @@ fn build_route_configuration(
     path_to_handler.insert("/".to_string(), Box::new(index_handler));
 
     for command_info in config.commands() {
-        let handler = handlers::command::CommandHandler::new(command_info.clone());
-        path_to_handler.insert(command_info.http_path().clone(), Box::new(handler));
+        let api_handler = handlers::command::api::APIHandler::new(command_info.clone());
+        path_to_handler.insert(command_info.api_path().clone(), Box::new(api_handler));
+
+        let html_handler = handlers::command::html::HTMLHandler::new(command_info.clone())?;
+        path_to_handler.insert(command_info.html_path().clone(), Box::new(html_handler));
     }
 
     for proxy_info in config.proxies() {
-        let handler = handlers::proxy::ProxyHandler::new(proxy_info.clone())?;
-        path_to_handler.insert(proxy_info.http_path().clone(), Box::new(handler));
+        let api_handler = handlers::proxy::api::APIHandler::new(proxy_info.clone())?;
+        path_to_handler.insert(proxy_info.api_path().clone(), Box::new(api_handler));
+
+        let html_handler = handlers::proxy::html::HTMLHandler::new(proxy_info.clone())?;
+        path_to_handler.insert(proxy_info.html_path().clone(), Box::new(html_handler));
     }
 
     for static_path_info in config.static_paths() {

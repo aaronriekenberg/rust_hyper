@@ -1,0 +1,46 @@
+{
+  "listen_address": "127.0.0.1:8000",
+  "main_page_info": {
+    "title": "Rusty Web"
+  },
+  "commands": [
+    {
+      "api_path": "/api/commands/ifconfig",
+      "html_path": "/commands/ifconfig",
+      "description": "ifconfig",
+      "command": "ifconfig",
+      "args": []
+    }
+  ],
+  "proxies": [
+    {
+      "api_path": "/api/proxies/test_proxy",
+      "html_path": "/proxies/test_proxy",
+      "description": "test proxy",
+      "url": "http://www.gogle.com"
+    }
+  ],
+  "static_paths": [
+    {
+      "http_path": "/command.js",
+      "fs_path": "static/command.js",
+      "content_type": "application/javascript",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/proxy.js",
+      "fs_path": "static/proxy.js",
+      "content_type": "application/javascript",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/style.css",
+      "fs_path": "static/style.css",
+      "content_type": "text/css",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    }
+  ]
+}

@@ -2,9 +2,6 @@ use chrono::prelude::Local;
 
 use futures::Future;
 
-use horrorshow::helper::doctype;
-use horrorshow::Template;
-
 use hyper::rt::Stream;
 use hyper::{StatusCode, Uri};
 
@@ -19,12 +16,11 @@ struct ResponseInfo {
     body: String,
 }
 
-struct InnerProxyHandler {
+struct InnerAPIHandler {
     uri: Uri,
-    proxy_info: ::config::ProxyInfo,
 }
 
-impl InnerProxyHandler {
+impl InnerAPIHandler {
     fn fetch_proxy(
         &self,
         http_client: &::server::HyperHttpClient,
@@ -61,67 +57,34 @@ impl InnerProxyHandler {
                 }),
         )
     }
-
-    fn build_pre_string(&self, response_info: ResponseInfo) -> String {
-        let mut pre_string =
-            String::with_capacity(response_info.headers.len() + response_info.body.len() + 100);
-
-        pre_string.push_str("Now: ");
-        pre_string.push_str(&::utils::local_time_to_string(Local::now()));
-        pre_string.push_str("\n\nGET ");
-        pre_string.push_str(&self.proxy_info.url());
-        pre_string.push_str("\n\nResponse Status: ");
-        pre_string.push_str(&response_info.version);
-        pre_string.push_str(" ");
-        pre_string.push_str(&response_info.status);
-        pre_string.push_str("\n\nResponse Headers: ");
-        pre_string.push_str(&response_info.headers);
-        pre_string.push_str("\n\n");
-        pre_string.push_str(&response_info.body);
-
-        pre_string
-    }
-
-    fn build_html_string(&self, pre_string: String) -> String {
-        let html_string = html! {
-          : doctype::HTML;
-          html {
-            head {
-              title: self.proxy_info.description();
-              meta(name = "viewport", content = "width=device, initial-scale=1");
-              link(rel = "stylesheet", type = "text/css", href = "style.css");
-            }
-            body {
-              a(href = "..") {
-                : ".."
-              }
-              pre {
-                : pre_string
-              }
-            }
-          }
-        }.into_string()
-        .unwrap_or_else(|err| format!("error executing template: {}", err));
-
-        html_string
-    }
 }
 
-pub struct ProxyHandler {
-    inner: Arc<InnerProxyHandler>,
+pub struct APIHandler {
+    inner: Arc<InnerAPIHandler>,
 }
 
-impl ProxyHandler {
+impl APIHandler {
     pub fn new(proxy_info: ::config::ProxyInfo) -> Result<Self, Box<::std::error::Error>> {
         let uri = proxy_info.url().parse()?;
 
-        Ok(ProxyHandler {
-            inner: Arc::new(InnerProxyHandler { uri, proxy_info }),
+        Ok(APIHandler {
+            inner: Arc::new(InnerAPIHandler { uri }),
         })
     }
 }
 
-impl ::server::RequestHandler for ProxyHandler {
+#[derive(Serialize)]
+struct APIResponse {
+    now: String,
+    method: String,
+    url: String,
+    version: String,
+    status: String,
+    headers: String,
+    body: String,
+}
+
+impl ::server::RequestHandler for APIHandler {
     fn handle(&self, req_context: &::server::RequestContext) -> ::server::ResponseFuture {
         let inner_clone = Arc::clone(&self.inner);
 
@@ -131,15 +94,26 @@ impl ::server::RequestHandler for ProxyHandler {
             self.inner
                 .fetch_proxy(http_client)
                 .and_then(move |response_info| {
-                    let pre_string = inner_clone.build_pre_string(response_info);
+                    let api_response = APIResponse {
+                        now: ::utils::local_time_to_string(Local::now()),
+                        method: "GET".to_string(),
+                        url: inner_clone.uri.to_string(),
+                        version: response_info.version,
+                        status: response_info.status,
+                        headers: response_info.headers,
+                        body: response_info.body,
+                    };
 
-                    let html_string = inner_clone.build_html_string(pre_string);
-
-                    Ok(::server::build_response_string(
-                        StatusCode::OK,
-                        Cow::from(html_string),
-                        ::server::text_html_content_type_header_value(),
-                    ))
+                    match ::serde_json::to_string(&api_response) {
+                        Ok(json_string) => Ok(::server::build_response_string(
+                            StatusCode::OK,
+                            Cow::from(json_string),
+                            ::server::application_json_content_type_header_value(),
+                        )),
+                        Err(_) => Ok(::server::build_response_status(
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                        )),
+                    }
                 }),
         )
     }

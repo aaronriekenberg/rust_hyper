@@ -165,6 +165,10 @@ pub fn text_html_content_type_header_value() -> HeaderValue {
     HeaderValue::from_static("text/html")
 }
 
+pub fn application_json_content_type_header_value() -> HeaderValue {
+    HeaderValue::from_static("application/json")
+}
+
 pub fn build_response_status(status_code: StatusCode) -> Response<Body> {
     Response::builder()
         .status(status_code)
