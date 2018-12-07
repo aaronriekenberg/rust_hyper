@@ -180,14 +180,7 @@
       "args": []
     }
   ],
-  "proxies": [
-    {
-      "api_path": "/api/proxies/coredns_metrics",
-      "html_path": "/proxies/coredns_metrics",
-      "description": "coredns metrics",
-      "url": "http://localhost:9153/metrics"
-    }
-  ],
+  "proxies": [],
   "static_paths": [
     {
       "http_path": "/command.js",
