@@ -1,6 +1,6 @@
 #!/bin/sh -x
 
-CONFIG_FILE=config/$(hostname)-config.yml
+CONFIG_FILE=config/$(hostname)-config.json
 
 pkill rust_hyper
 
