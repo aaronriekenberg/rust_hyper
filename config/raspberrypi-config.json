@@ -58,7 +58,7 @@
     {
       "api_path": "/api/commands/log_ls",
       "html_path": "/commands/log_ls",
-      "description": "ifconfig",
+      "description": "log ls",
       "command": "ls",
       "args": [
         "-latrh",
