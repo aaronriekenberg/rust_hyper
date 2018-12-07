@@ -1,7 +1,7 @@
 {
-  "listen_address": "192.168.1.1:8000",
+  "listen_address": "0.0.0.0:8000",
   "main_page_info": {
-    "title": "Aaron's APU2"
+    "title": "Aaron's Raspberry Pi"
   },
   "commands": [
     {
@@ -11,16 +11,6 @@
       "command": "/usr/sbin/arp",
       "args": [
         "-an"
-      ]
-    },
-    {
-      "api_path": "/api/commands/coredns_log_tail",
-      "html_path": "/commands/coredns_log_tail",
-      "description": "coredns log tail",
-      "command": "tail",
-      "args": [
-        "-n30",
-        "/home/aaron/coredns-run/logs/current"
       ]
     },
     {
@@ -43,13 +33,6 @@
       ]
     },
     {
-      "api_path": "/api/commands/dhcp-lease-list",
-      "html_path": "/commands/dhcp-lease-list",
-      "description": "dhcp lease list",
-      "command": "/home/aaron/rust-dhcp-leases/target/release/rust-dhcp-leases",
-      "args": []
-    },
-    {
       "api_path": "/api/commands/dmesg",
       "html_path": "/commands/dmesg",
       "description": "dmesg",
@@ -66,13 +49,20 @@
       "args": []
     },
     {
+      "api_path": "/api/commands/iwconfig",
+      "html_path": "/commands/iwconfig",
+      "description": "iwconfig",
+      "command": "/sbin/iwconfig",
+      "args": []
+    },
+    {
       "api_path": "/api/commands/log_ls",
       "html_path": "/commands/log_ls",
       "description": "ifconfig",
       "command": "ls",
       "args": [
         "-latrh",
-        "/home/aaron/rust_hyper/logs"
+        "/home/pi/rust_hyper/logs"
       ]
     },
     {
@@ -82,7 +72,7 @@
       "command": "tail",
       "args": [
         "-n30",
-        "/home/aaron/rust_hyper/logs/current"
+        "/home/pi/rust_hyper/logs/current"
       ]
     },
     {
@@ -130,10 +120,10 @@
       ]
     },
     {
-      "api_path": "/api/commands/sensors",
-      "html_path": "/commands/sensors",
-      "description": "sensors",
-      "command": "sensors",
+      "api_path": "/api/commands/pitemp",
+      "html_path": "/commands/pitemp",
+      "description": "pitemp",
+      "command": "/home/pi/bin/pitemp.sh",
       "args": []
     },
     {
@@ -155,6 +145,17 @@
       "args": [
         "-b",
         "-n1"
+      ]
+    },
+    {
+      "api_path": "/api/commands/unifi_logs",
+      "html_path": "/commands/unifi_logs",
+      "description": "unifi logs",
+      "command": "sudo",
+      "args": [
+        "tail",
+        "-n30",
+        "/var/log/unifi/server.log"
       ]
     },
     {
@@ -204,7 +205,7 @@
     },
     {
       "http_path": "/favicon.ico",
-      "fs_path": "static/rust-favicon.ico",
+      "fs_path": "static/raspberrypi-favicon.ico",
       "content_type": "image/x-icon",
       "cache_control": "max-age=60",
       "include_in_main_page": false
@@ -213,48 +214,6 @@
       "http_path": "/style.css",
       "fs_path": "static/style.css",
       "content_type": "text/css",
-      "cache_control": "max-age=60",
-      "include_in_main_page": false
-    },
-    {
-      "http_path": "/vnstat.html",
-      "fs_path": "/home/aaron/vnstat/index.html",
-      "content_type": "text/html",
-      "cache_control": "max-age=60",
-      "include_in_main_page": true
-    },
-    {
-      "http_path": "/vnstat_summary.png",
-      "fs_path": "/home/aaron/vnstat/vnstat_summary.png",
-      "content_type": "image/png",
-      "cache_control": "max-age=60",
-      "include_in_main_page": false
-    },
-    {
-      "http_path": "/vnstat_hours.png",
-      "fs_path": "/home/aaron/vnstat/vnstat_hours.png",
-      "content_type": "image/png",
-      "cache_control": "max-age=60",
-      "include_in_main_page": false
-    },
-    {
-      "http_path": "/vnstat_days.png",
-      "fs_path": "/home/aaron/vnstat/vnstat_days.png",
-      "content_type": "image/png",
-      "cache_control": "max-age=60",
-      "include_in_main_page": false
-    },
-    {
-      "http_path": "/vnstat_months.png",
-      "fs_path": "/home/aaron/vnstat/vnstat_months.png",
-      "content_type": "image/png",
-      "cache_control": "max-age=60",
-      "include_in_main_page": false
-    },
-    {
-      "http_path": "/vnstat_top10.png",
-      "fs_path": "/home/aaron/vnstat/vnstat_top10.png",
-      "content_type": "image/png",
       "cache_control": "max-age=60",
       "include_in_main_page": false
     }
