@@ -1,0 +1,246 @@
+{
+  "listen_address": "192.168.1.1:8080",
+  "main_page_info": {
+    "title": "Aaron's APU2"
+  },
+  "commands": [
+    {
+      "api_path": "/api/commands/arp",
+      "html_path": "/commands/arp",
+      "description": "arp",
+      "command": "/usr/sbin/arp",
+      "args": [
+        "-an"
+      ]
+    },
+    {
+      "api_path": "/api/commands/coredns_log_tail",
+      "html_path": "/commands/coredns_log_tail",
+      "description": "coredns log tail",
+      "command": "tail",
+      "args": [
+        "-n30",
+        "/home/aaron/coredns-run/logs/current"
+      ]
+    },
+    {
+      "api_path": "/api/commands/cpu_vulnerabilities",
+      "html_path": "/commands/cpu_vulnerabilities",
+      "description": "cpu vulnerabilities",
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "grep . /sys/devices/system/cpu/vulnerabilities/*"
+      ]
+    },
+    {
+      "api_path": "/api/commands/dhcp-lease-list",
+      "html_path": "/commands/dhcp-lease-list",
+      "description": "dhcp lease list",
+      "command": "/home/aaron/rust-dhcp-leases/target/release/rust-dhcp-leases",
+      "args": []
+    },
+    {
+      "api_path": "/api/commands/dmesg",
+      "html_path": "/commands/dmesg",
+      "description": "dmesg",
+      "command": "sudo",
+      "args": [
+        "dmesg"
+      ]
+    },
+    {
+      "api_path": "/api/commands/ifconfig",
+      "html_path": "/commands/ifconfig",
+      "description": "ifconfig",
+      "command": "/sbin/ifconfig",
+      "args": []
+    },
+    {
+      "api_path": "/api/commands/log_ls",
+      "html_path": "/commands/log_ls",
+      "description": "ifconfig",
+      "command": "ls",
+      "args": [
+        "-latrh",
+        "/home/aaron/rust_hyper/logs"
+      ]
+    },
+    {
+      "api_path": "/api/commands/log_tail",
+      "html_path": "/commands/log_tail",
+      "description": "log tail",
+      "command": "tail",
+      "args": [
+        "-n30",
+        "/home/aaron/rust_hyper/logs/current"
+      ]
+    },
+    {
+      "api_path": "/api/commands/lscpu",
+      "html_path": "/commands/lscpu",
+      "description": "lscpu",
+      "command": "lscpu",
+      "args": []
+    },
+    {
+      "api_path": "/api/commands/ncal",
+      "html_path": "/commands/ncal",
+      "description": "ncal",
+      "command": "ncal",
+      "args": [
+        "-h",
+        "-y"
+      ]
+    },
+    {
+      "api_path": "/api/commands/netstat_an",
+      "html_path": "/commands/netstat_an",
+      "description": "netstat -an",
+      "command": "netstat",
+      "args": [
+        "-an"
+      ]
+    },
+    {
+      "api_path": "/api/commands/netstat_s",
+      "html_path": "/commands/netstat_s",
+      "description": "netstat -s",
+      "command": "netstat",
+      "args": [
+        "-s"
+      ]
+    },
+    {
+      "api_path": "/api/commands/ntpq",
+      "html_path": "/commands/ntpq",
+      "description": "ntpq",
+      "command": "ntpq",
+      "args": [
+        "-p"
+      ]
+    },
+    {
+      "api_path": "/api/commands/sensors",
+      "html_path": "/commands/sensors",
+      "description": "sensors",
+      "command": "sensors",
+      "args": []
+    },
+    {
+      "api_path": "/api/commands/tc_qdisc",
+      "html_path": "/commands/tc_qdisc",
+      "description": "tc qdisc show",
+      "command": "/sbin/tc",
+      "args": [
+        "-s",
+        "qdisc",
+        "show"
+      ]
+    },
+    {
+      "api_path": "/api/commands/top",
+      "html_path": "/commands/top",
+      "description": "top",
+      "command": "top",
+      "args": [
+        "-b",
+        "-n1"
+      ]
+    },
+    {
+      "api_path": "/api/commands/uptime",
+      "html_path": "/commands/uptime",
+      "description": "uptime",
+      "command": "uptime",
+      "args": []
+    },
+    {
+      "api_path": "/api/commands/vmstat",
+      "html_path": "/commands/vmstat",
+      "description": "vmstat",
+      "command": "vmstat",
+      "args": []
+    },
+    {
+      "api_path": "/api/commands/w",
+      "html_path": "/commands/w",
+      "description": "w",
+      "command": "w",
+      "args": []
+    }
+  ],
+  "proxies": [
+    {
+      "api_path": "/api/proxies/coredns_metrics",
+      "html_path": "/proxies/coredns_metrics",
+      "description": "coredns metrics",
+      "url": "http://localhost:9153/metrics"
+    }
+  ],
+  "static_paths": [
+    {
+      "http_path": "/command.js",
+      "fs_path": "static/command.js",
+      "content_type": "application/javascript",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/proxy.js",
+      "fs_path": "static/proxy.js",
+      "content_type": "application/javascript",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/style.css",
+      "fs_path": "static/style.css",
+      "content_type": "text/css",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/vnstat.html",
+      "fs_path": "/home/aaron/vnstat/index.html",
+      "content_type": "text/html",
+      "cache_control": "max-age=60",
+      "include_in_main_page": true
+    },
+    {
+      "http_path": "/vnstat_summary.png",
+      "fs_path": "/home/aaron/vnstat/vnstat_summary.png",
+      "content_type": "image/png",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/vnstat_hours.png",
+      "fs_path": "/home/aaron/vnstat/vnstat_hours.png",
+      "content_type": "image/png",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/vnstat_days.png",
+      "fs_path": "/home/aaron/vnstat/vnstat_days.png",
+      "content_type": "image/png",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/vnstat_months.png",
+      "fs_path": "/home/aaron/vnstat/vnstat_months.png",
+      "content_type": "image/png",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    },
+    {
+      "http_path": "/vnstat_top10.png",
+      "fs_path": "/home/aaron/vnstat/vnstat_top10.png",
+      "content_type": "image/png",
+      "cache_control": "max-age=60",
+      "include_in_main_page": false
+    }
+  ]
+}
