@@ -12,7 +12,7 @@ pub struct IndexHandler {
 }
 
 impl IndexHandler {
-    pub fn new(config: &::config::Configuration) -> Result<Self, Box<::std::error::Error>> {
+    pub fn new(config: &crate::config::Configuration) -> Result<Self, Box<::std::error::Error>> {
         let static_paths_to_include: Vec<_> = config
             .static_paths()
             .iter()
@@ -21,7 +21,7 @@ impl IndexHandler {
 
         let mut last_modified_string = String::new();
         last_modified_string.push_str("Last Modified: ");
-        last_modified_string.push_str(&::utils::local_time_now_to_string());
+        last_modified_string.push_str(&crate::utils::local_time_now_to_string());
 
         let s = html! {
           : doctype::HTML;
@@ -83,18 +83,19 @@ impl IndexHandler {
               }
             }
           }
-        }.into_string()?;
+        }
+        .into_string()?;
 
         Ok(IndexHandler { index_string: s })
     }
 }
 
-impl ::server::RequestHandler for IndexHandler {
-    fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
-        Box::new(future::ok(::server::build_response_string(
+impl crate::server::RequestHandler for IndexHandler {
+    fn handle(&self, _: &crate::server::RequestContext) -> crate::server::ResponseFuture {
+        Box::new(future::ok(crate::server::build_response_string(
             StatusCode::OK,
             Cow::from(self.index_string.clone()),
-            ::server::text_html_content_type_header_value(),
+            crate::server::text_html_content_type_header_value(),
         )))
     }
 }

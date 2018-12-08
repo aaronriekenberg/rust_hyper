@@ -71,7 +71,7 @@ impl RequestLogInfo {
 fn log_request_and_response(req_log_info: RequestLogInfo, resp: &Response<Body>) {
     let response_status = resp.status().as_u16().to_string();
 
-    let duration = ::utils::duration_in_seconds_f64(&req_log_info.start_time.elapsed());
+    let duration = crate::utils::duration_in_seconds_f64(&req_log_info.start_time.elapsed());
 
     info!(
         "\"{} {} {}\" {} {:.9}s",
@@ -263,7 +263,8 @@ pub fn run_forever(
                 let threaded_server_clone = threaded_server.clone();
 
                 service_fn(move |req: Request<Body>| threaded_server_clone.call(req))
-            }).map_err(|e| warn!("serve error: {}", e));
+            })
+            .map_err(|e| warn!("serve error: {}", e));
 
         info!("Listening on http://{}", listen_addr);
 

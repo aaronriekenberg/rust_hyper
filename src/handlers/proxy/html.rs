@@ -13,7 +13,7 @@ pub struct HTMLHandler {
 }
 
 impl HTMLHandler {
-    pub fn new(proxy_info: ::config::ProxyInfo) -> Result<Self, Box<::std::error::Error>> {
+    pub fn new(proxy_info: crate::config::ProxyInfo) -> Result<Self, Box<::std::error::Error>> {
         let mut request_string = String::new();
 
         request_string.push_str("GET ");
@@ -49,18 +49,19 @@ impl HTMLHandler {
                   pre {}
               }
             }
-        }.into_string()?;
+        }
+        .into_string()?;
 
         Ok(HTMLHandler { html })
     }
 }
 
-impl ::server::RequestHandler for HTMLHandler {
-    fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
-        Box::new(future::ok(::server::build_response_string(
+impl crate::server::RequestHandler for HTMLHandler {
+    fn handle(&self, _: &crate::server::RequestContext) -> crate::server::ResponseFuture {
+        Box::new(future::ok(crate::server::build_response_string(
             StatusCode::OK,
             Cow::from(self.html.clone()),
-            ::server::text_html_content_type_header_value(),
+            crate::server::text_html_content_type_header_value(),
         )))
     }
 }

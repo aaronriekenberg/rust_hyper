@@ -25,7 +25,8 @@ fn run_logging_output_thread(receiver: mpsc::Receiver<String>) {
                                 .write(
                                     "run_logging_output_thread try_recv disconnected error"
                                         .as_bytes(),
-                                ).expect("run_logging_output_thread error writing to stdout");
+                                )
+                                .expect("run_logging_output_thread error writing to stdout");
                         }
                     }
                 }
@@ -63,7 +64,8 @@ pub fn initialize_logging() -> Result<(), Box<::std::error::Error>> {
                 record.target(),
                 message
             ))
-        }).chain(sender)
+        })
+        .chain(sender)
         .apply()?;
 
     Ok(())

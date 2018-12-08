@@ -31,7 +31,7 @@ impl StaticFileHandler {
 fn build_last_modified(modified_result: ::std::io::Result<SystemTime>) -> Option<HeaderValue> {
     match modified_result {
         Ok(modified) => {
-            let utc_modified = ::utils::system_time_to_utc(&modified);
+            let utc_modified = crate::utils::system_time_to_utc(&modified);
 
             let last_modified_value = utc_modified.format("%a, %d %b %Y %H:%M:%S GMT").to_string();
 
@@ -41,8 +41,8 @@ fn build_last_modified(modified_result: ::std::io::Result<SystemTime>) -> Option
     }
 }
 
-impl ::server::RequestHandler for StaticFileHandler {
-    fn handle(&self, _: &::server::RequestContext) -> ::server::ResponseFuture {
+impl crate::server::RequestHandler for StaticFileHandler {
+    fn handle(&self, _: &crate::server::RequestContext) -> crate::server::ResponseFuture {
         let file_path_clone = self.file_path.clone();
         let content_type_header_value_clone = self.content_type_header_value.clone();
         let cache_control_header_value_clone = self.cache_control_header_value.clone();
@@ -76,7 +76,8 @@ impl ::server::RequestHandler for StaticFileHandler {
                             },
                         )
                     })
-                }).or_else(|_| Ok(::server::build_response_status(StatusCode::NOT_FOUND))),
+                })
+                .or_else(|_| Ok(crate::server::build_response_status(StatusCode::NOT_FOUND))),
         )
     }
 }

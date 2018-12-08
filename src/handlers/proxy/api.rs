@@ -21,8 +21,8 @@ struct InnerAPIHandler {
 impl InnerAPIHandler {
     fn fetch_proxy(
         &self,
-        http_client: &::server::HyperHttpClient,
-    ) -> Box<Future<Item = ResponseInfo, Error = ::server::HandlerError> + Send> {
+        http_client: &crate::server::HyperHttpClient,
+    ) -> Box<Future<Item = ResponseInfo, Error = crate::server::HandlerError> + Send> {
         Box::new(
             http_client
                 .get(self.uri.clone())
@@ -47,7 +47,8 @@ impl InnerAPIHandler {
                                 body: format!("proxy body error: {}", e),
                             }),
                         })
-                }).or_else(|err| {
+                })
+                .or_else(|err| {
                     Ok(ResponseInfo {
                         body: format!("proxy error: {}", err),
                         ..Default::default()
@@ -62,7 +63,7 @@ pub struct APIHandler {
 }
 
 impl APIHandler {
-    pub fn new(proxy_info: ::config::ProxyInfo) -> Result<Self, Box<::std::error::Error>> {
+    pub fn new(proxy_info: crate::config::ProxyInfo) -> Result<Self, Box<::std::error::Error>> {
         let uri = proxy_info.url().parse()?;
 
         Ok(APIHandler {
@@ -82,8 +83,8 @@ struct APIResponse {
     body: String,
 }
 
-impl ::server::RequestHandler for APIHandler {
-    fn handle(&self, req_context: &::server::RequestContext) -> ::server::ResponseFuture {
+impl crate::server::RequestHandler for APIHandler {
+    fn handle(&self, req_context: &crate::server::RequestContext) -> crate::server::ResponseFuture {
         let inner_clone = Arc::clone(&self.inner);
 
         let http_client = req_context.app_context().http_client();
@@ -93,7 +94,7 @@ impl ::server::RequestHandler for APIHandler {
                 .fetch_proxy(http_client)
                 .and_then(move |response_info| {
                     let api_response = APIResponse {
-                        now: ::utils::local_time_now_to_string(),
+                        now: crate::utils::local_time_now_to_string(),
                         method: "GET".to_string(),
                         url: inner_clone.uri.to_string(),
                         version: response_info.version,
@@ -103,12 +104,12 @@ impl ::server::RequestHandler for APIHandler {
                     };
 
                     match ::serde_json::to_string(&api_response) {
-                        Ok(json_string) => Ok(::server::build_response_string(
+                        Ok(json_string) => Ok(crate::server::build_response_string(
                             StatusCode::OK,
                             Cow::from(json_string),
-                            ::server::application_json_content_type_header_value(),
+                            crate::server::application_json_content_type_header_value(),
                         )),
-                        Err(_) => Ok(::server::build_response_status(
+                        Err(_) => Ok(crate::server::build_response_status(
                             StatusCode::INTERNAL_SERVER_ERROR,
                         )),
                     }
