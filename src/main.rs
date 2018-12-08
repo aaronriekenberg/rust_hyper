@@ -64,11 +64,6 @@ fn main() {
 
     logging::initialize_logging().expect("failed to initialize logging");
 
-    let executable_path = std::env::args()
-        .nth(0)
-        .expect("missing executable command line argument");
-    info!("executable_path = '{}'", executable_path);
-
     let config_file = std::env::args()
         .nth(1)
         .expect("config file required as command line argument");

@@ -14,7 +14,10 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Instant;
 
-pub type HyperHttpClient = ::hyper::Client<::hyper::client::HttpConnector, ::hyper::Body>;
+pub type HyperHttpClient = ::hyper::Client<
+    ::hyper::client::HttpConnector<::hyper::client::connect::dns::TokioThreadpoolGaiResolver>,
+    ::hyper::Body,
+>;
 
 pub struct ApplicationContext {
     http_client: HyperHttpClient,
@@ -255,7 +258,8 @@ pub fn run_forever(
     route_configuration: RouteConfiguration,
 ) -> Result<(), Box<error::Error>> {
     ::hyper::rt::run(future::lazy(move || {
-        let http_client = HyperHttpClient::new();
+        let http_client = ::hyper::client::Client::builder()
+            .build(::hyper::client::HttpConnector::new_with_tokio_threadpool_resolver());
 
         let application_context = Arc::new(ApplicationContext::new(http_client));
 
