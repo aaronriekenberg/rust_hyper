@@ -4,8 +4,6 @@ mod logging;
 mod server;
 mod utils;
 
-use log::info;
-
 fn install_panic_hook() {
     let original_panic_hook = std::panic::take_hook();
 
@@ -69,7 +67,6 @@ fn main() {
         .expect("config file required as command line argument");
 
     let config = config::read_config(config_file).expect("error reading configuration file");
-    info!("config = {:#?}", config);
 
     let listen_addr = config
         .server_info()
