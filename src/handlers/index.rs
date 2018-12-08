@@ -29,7 +29,7 @@ impl IndexHandler {
           html {
             head {
               title: config.main_page_info().title();
-              meta(name = "viewport", content = "width=device, initial-scale=1");
+              meta(name = "viewport", content = "width=device-width, initial-scale=1");
               link(rel = "stylesheet", type = "text/css", href = "/style.css");
             }
             body {
@@ -75,6 +75,16 @@ impl IndexHandler {
                         : static_path_info.fs_path()
                       }
                     }
+                  }
+                }
+              }
+              h3 {
+                : "Debugging:"
+              }
+              ul {
+                li {
+                  a(href = "/configuration") {
+                    : "configuration"
                   }
                 }
               }

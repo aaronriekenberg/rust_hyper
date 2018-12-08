@@ -48,6 +48,9 @@ fn build_route_configuration(
         path_to_handler.insert(static_path_info.http_path().clone(), Box::new(handler));
     }
 
+    let config_handler = Box::new(handlers::config::ConfigHandler::new(config));
+    path_to_handler.insert("/configuration".to_string(), config_handler);
+
     let not_found_handler = handlers::not_found::NotFoundHandler;
 
     Ok(server::RouteConfiguration::new(

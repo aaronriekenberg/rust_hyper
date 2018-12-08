@@ -21,28 +21,28 @@ impl HTMLHandler {
         request_string.push_str(proxy_info.url());
 
         let mut onload_string = String::new();
-        onload_string.push_str("onload(\"");
+        onload_string.push_str("onload('");
         onload_string.push_str(&request_string);
-        onload_string.push_str("\", \"");
+        onload_string.push_str("', '");
         onload_string.push_str(proxy_info.api_path());
-        onload_string.push_str("\")");
+        onload_string.push_str("')");
 
         let html = html! {
             : doctype::HTML;
             html {
               head {
                 title: proxy_info.description();
-                meta(name = "viewport", content = "width=device, initial-scale=1");
+                meta(name = "viewport", content = "width=device-width, initial-scale=1");
                 link(rel = "stylesheet", type = "text/css", href = "/style.css");
                 script(src = "/proxy.js") {}
               }
-              body(onload = onload_string) {
+              body(onload = Raw(onload_string)) {
                   div {
                       a(href = "..") {
                           : ".."
                       }
                       : Raw("&nbsp");
-                      input(type = "checkbox", id = "autoRefresh", checked);
+                      input(type = "checkbox", id = "autoRefresh");
                       label(for = "autoRefresh") {
                           : "Auto Refresh"
                       }
