@@ -2,6 +2,8 @@ use futures::Future;
 
 use hyper::StatusCode;
 
+use serde_derive::Serialize;
+
 use std::borrow::Cow;
 use std::process::Command;
 use std::sync::Arc;

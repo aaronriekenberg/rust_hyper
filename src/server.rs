@@ -1,5 +1,7 @@
 use futures::{future, Future};
 
+use log::{info, warn};
+
 use hyper::header::{HeaderValue, CONTENT_TYPE};
 use hyper::service::service_fn;
 use hyper::{Body, Request, Response, Server, StatusCode};

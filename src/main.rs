@@ -1,23 +1,10 @@
-extern crate chrono;
-extern crate hyper;
-#[macro_use]
-extern crate horrorshow;
-extern crate fern;
-extern crate futures;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_derive;
-extern crate serde_json;
-extern crate tokio_fs;
-extern crate tokio_io;
-extern crate tokio_process;
-
 mod config;
 mod handlers;
 mod logging;
 mod server;
 mod utils;
+
+use log::info;
 
 fn install_panic_hook() {
     let original_panic_hook = std::panic::take_hook();

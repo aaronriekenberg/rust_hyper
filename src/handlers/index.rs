@@ -2,6 +2,7 @@ use futures::future;
 
 use horrorshow::helper::doctype;
 use horrorshow::Template;
+use horrorshow::{append_html, html};
 
 use hyper::StatusCode;
 
