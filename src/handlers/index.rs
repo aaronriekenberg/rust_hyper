@@ -13,7 +13,10 @@ pub struct IndexHandler {
 }
 
 impl IndexHandler {
-    pub fn new(config: &crate::config::Configuration) -> Result<Self, Box<::std::error::Error>> {
+    pub fn new(
+        config: &crate::config::Configuration,
+        environment: &crate::environment::Environment,
+    ) -> Result<Self, Box<::std::error::Error>> {
         let static_paths_to_include: Vec<_> = config
             .static_paths()
             .iter()
@@ -23,6 +26,10 @@ impl IndexHandler {
         let mut last_modified_string = String::new();
         last_modified_string.push_str("Last Modified: ");
         last_modified_string.push_str(&crate::utils::local_time_now_to_string());
+
+        let mut git_hash_string = String::new();
+        git_hash_string.push_str("Git Hash: ");
+        git_hash_string.push_str(&environment.git_hash());
 
         let s = html! {
           : doctype::HTML;
@@ -87,10 +94,19 @@ impl IndexHandler {
                     : "configuration"
                   }
                 }
+                li {
+                  a(href = "/environment") {
+                    : "environment"
+                  }
+                }
               }
               hr;
               small {
                 : &last_modified_string
+              }
+              br;
+              small {
+                : &git_hash_string
               }
             }
           }

@@ -1,4 +1,5 @@
 mod config;
+mod environment;
 mod handlers;
 mod logging;
 mod server;
@@ -15,10 +16,11 @@ fn install_panic_hook() {
 
 fn build_route_configuration(
     config: &config::Configuration,
+    environment: &environment::Environment,
 ) -> Result<server::RouteConfiguration, Box<std::error::Error>> {
     let mut path_to_handler = server::RouteConfigurationHandlerMap::new();
 
-    let index_handler = handlers::index::IndexHandler::new(config)?;
+    let index_handler = handlers::index::IndexHandler::new(config, environment)?;
     path_to_handler.insert("/".to_string(), Box::new(index_handler));
 
     for command_info in config.commands() {
@@ -48,6 +50,9 @@ fn build_route_configuration(
 
     let config_handler = Box::new(handlers::config::ConfigHandler::new(config));
     path_to_handler.insert("/configuration".to_string(), config_handler);
+
+    let environment_handler = Box::new(handlers::environment::EnvironmentHandler::new(environment));
+    path_to_handler.insert("/environment".to_string(), environment_handler);
 
     let not_found_handler = handlers::not_found::NotFoundHandler;
 
@@ -79,8 +84,10 @@ fn main() {
 
     let config = config::read_config(config_file).expect("error reading configuration file");
 
-    let route_configuration =
-        build_route_configuration(&config).expect("failed to build route_configuration");
+    let environment = environment::get_environment().expect("error getting environment");
+
+    let route_configuration = build_route_configuration(&config, &environment)
+        .expect("failed to build route_configuration");
 
     let server_configuration =
         build_server_configuration(&config).expect("failed to build server_configuration");
