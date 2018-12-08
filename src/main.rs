@@ -57,6 +57,17 @@ fn build_route_configuration(
     ))
 }
 
+fn build_server_configuration(
+    config: &config::Configuration,
+) -> Result<server::ServerConfiguration, Box<std::error::Error>> {
+    let listen_addr = config.server_info().listen_address().parse()?;
+
+    Ok(server::ServerConfiguration::new(
+        listen_addr,
+        config.server_info().tcp_nodelay(),
+    ))
+}
+
 fn main() {
     install_panic_hook();
 
@@ -68,19 +79,12 @@ fn main() {
 
     let config = config::read_config(config_file).expect("error reading configuration file");
 
-    let listen_addr = config
-        .server_info()
-        .listen_address()
-        .parse()
-        .expect("invalid listen_address");
-
     let route_configuration =
         build_route_configuration(&config).expect("failed to build route_configuration");
 
-    server::run_forever(
-        listen_addr,
-        config.server_info().tcp_nodelay(),
-        route_configuration,
-    )
-    .expect("server::run_forever failed");
+    let server_configuration =
+        build_server_configuration(&config).expect("failed to build server_configuration");
+
+    server::run_forever(server_configuration, route_configuration)
+        .expect("server::run_forever failed");
 }

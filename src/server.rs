@@ -252,9 +252,22 @@ impl ThreadedServer {
     }
 }
 
-pub fn run_forever(
+pub struct ServerConfiguration {
     listen_addr: SocketAddr,
     tcp_nodelay: bool,
+}
+
+impl ServerConfiguration {
+    pub fn new(listen_addr: SocketAddr, tcp_nodelay: bool) -> Self {
+        ServerConfiguration {
+            listen_addr,
+            tcp_nodelay,
+        }
+    }
+}
+
+pub fn run_forever(
+    server_configuration: ServerConfiguration,
     route_configuration: RouteConfiguration,
 ) -> Result<(), Box<error::Error>> {
     ::hyper::rt::run(future::lazy(move || {
@@ -265,8 +278,8 @@ pub fn run_forever(
 
         let threaded_server = ThreadedServer::new(application_context, route_configuration);
 
-        let server = Server::bind(&listen_addr)
-            .tcp_nodelay(tcp_nodelay)
+        let server = Server::bind(&server_configuration.listen_addr)
+            .tcp_nodelay(server_configuration.tcp_nodelay)
             .serve(move || {
                 let threaded_server_clone = threaded_server.clone();
 
@@ -274,7 +287,7 @@ pub fn run_forever(
             })
             .map_err(|e| warn!("serve error: {}", e));
 
-        info!("Listening on http://{}", listen_addr);
+        info!("Listening on http://{}", server_configuration.listen_addr);
 
         server
     }));
