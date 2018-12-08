@@ -74,6 +74,7 @@ fn main() {
     info!("config = {:#?}", config);
 
     let listen_addr = config
+        .server_info()
         .listen_address()
         .parse()
         .expect("invalid listen_address");
@@ -81,5 +82,10 @@ fn main() {
     let route_configuration =
         build_route_configuration(&config).expect("failed to build route_configuration");
 
-    server::run_forever(listen_addr, route_configuration).expect("server::run_forever failed");
+    server::run_forever(
+        listen_addr,
+        config.server_info().tcp_nodelay(),
+        route_configuration,
+    )
+    .expect("server::run_forever failed");
 }

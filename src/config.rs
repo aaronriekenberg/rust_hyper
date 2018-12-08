@@ -93,6 +93,22 @@ impl StaticPathInfo {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+pub struct ServerInfo {
+    listen_address: String,
+    tcp_nodelay: bool,
+}
+
+impl ServerInfo {
+    pub fn listen_address(&self) -> &String {
+        &self.listen_address
+    }
+
+    pub fn tcp_nodelay(&self) -> bool {
+        self.tcp_nodelay
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct MainPageInfo {
     title: String,
 }
@@ -105,7 +121,7 @@ impl MainPageInfo {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct Configuration {
-    listen_address: String,
+    server_info: ServerInfo,
     main_page_info: MainPageInfo,
     commands: Vec<CommandInfo>,
     proxies: Vec<ProxyInfo>,
@@ -113,8 +129,8 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn listen_address(&self) -> &String {
-        &self.listen_address
+    pub fn server_info(&self) -> &ServerInfo {
+        &self.server_info
     }
 
     pub fn main_page_info(&self) -> &MainPageInfo {

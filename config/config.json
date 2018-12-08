@@ -1,5 +1,8 @@
 {
-  "listen_address": "127.0.0.1:8000",
+  "server_info": {
+    "listen_address": "127.0.0.1:8000",
+    "tcp_nodelay": true
+  },
   "main_page_info": {
     "title": "Rusty Web"
   },

@@ -251,6 +251,7 @@ impl ThreadedServer {
 
 pub fn run_forever(
     listen_addr: SocketAddr,
+    tcp_nodelay: bool,
     route_configuration: RouteConfiguration,
 ) -> Result<(), Box<error::Error>> {
     ::hyper::rt::run(future::lazy(move || {
@@ -261,6 +262,7 @@ pub fn run_forever(
         let threaded_server = ThreadedServer::new(application_context, route_configuration);
 
         let server = Server::bind(&listen_addr)
+            .tcp_nodelay(tcp_nodelay)
             .serve(move || {
                 let threaded_server_clone = threaded_server.clone();
 
