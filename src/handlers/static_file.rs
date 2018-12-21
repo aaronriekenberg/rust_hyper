@@ -36,47 +36,49 @@ fn get_if_modified_since_time(
     let req = req_context.req();
     let req_headers = req.headers();
 
-    match req_headers.get(IF_MODIFIED_SINCE) {
-        Some(value) => match value.to_str() {
-            Ok(string_value) => match DateTime::parse_from_rfc2822(string_value) {
-                Ok(dt) => Some(dt.with_timezone(&Utc)),
-                Err(_) => None,
-            },
-            Err(_) => None,
-        },
-        None => None,
+    let mut return_value = None;
+
+    if let Some(header_value) = req_headers.get(IF_MODIFIED_SINCE) {
+        if let Ok(str_value) = header_value.to_str() {
+            if let Ok(dt) = DateTime::parse_from_rfc2822(str_value) {
+                return_value = Some(dt.with_timezone(&Utc));
+            }
+        }
     }
+
+    return_value
 }
 
 fn file_modified_since_header(
     if_modified_since_time_option: &Option<DateTime<Utc>>,
     file_last_modified_result: &::std::io::Result<SystemTime>,
 ) -> bool {
-    match if_modified_since_time_option {
-        Some(if_modified_since_time) => match file_last_modified_result {
-            Ok(file_last_modified) => {
-                let utc_file_last_modified = crate::utils::system_time_to_utc(&file_last_modified);
-                if_modified_since_time.timestamp() < utc_file_last_modified.timestamp()
-            }
-            Err(_) => true,
-        },
-        None => true,
+    let mut return_value = true;
+
+    if let Some(if_modified_since_time) = if_modified_since_time_option {
+        if let Ok(file_last_modified) = file_last_modified_result {
+            let utc_file_last_modified = crate::utils::system_time_to_utc(&file_last_modified);
+            return_value = if_modified_since_time.timestamp() < utc_file_last_modified.timestamp()
+        }
     }
+
+    return_value
 }
 
 fn build_last_modified_header(
     modified_result: &::std::io::Result<SystemTime>,
 ) -> Option<HeaderValue> {
-    match modified_result {
-        Ok(modified) => {
-            let utc_modified = crate::utils::system_time_to_utc(&modified);
+    let mut return_value = None;
 
-            let last_modified_value = utc_modified.format("%a, %d %b %Y %H:%M:%S GMT").to_string();
+    if let Ok(modified) = modified_result {
+        let utc_modified = crate::utils::system_time_to_utc(&modified);
 
-            Some(HeaderValue::from_str(&last_modified_value).unwrap())
-        }
-        Err(_) => None,
+        let last_modified_value = utc_modified.format("%a, %d %b %Y %H:%M:%S GMT").to_string();
+
+        return_value = Some(HeaderValue::from_str(&last_modified_value).unwrap())
     }
+
+    return_value
 }
 
 fn build_not_modified(
@@ -141,22 +143,23 @@ impl crate::server::RequestHandler for StaticFileHandler {
                         let last_modified_header_value_option =
                             build_last_modified_header(&file_modified);
 
-                        match file_modified_since_header(
+                        if file_modified_since_header(
                             &if_modified_since_time_option,
                             &file_modified,
                         ) {
-                            false => build_not_modified(
-                                content_type_header_value_clone,
-                                cache_control_header_value_clone,
-                                last_modified_header_value_option,
-                            ),
-                            true => build_file_response(
+                            build_file_response(
                                 content_type_header_value_clone,
                                 cache_control_header_value_clone,
                                 last_modified_header_value_option,
                                 file,
                                 metadata,
-                            ),
+                            )
+                        } else {
+                            build_not_modified(
+                                content_type_header_value_clone,
+                                cache_control_header_value_clone,
+                                last_modified_header_value_option,
+                            )
                         }
                     })
                 })
