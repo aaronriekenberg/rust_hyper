@@ -33,8 +33,7 @@ impl StaticFileHandler {
 fn get_if_modified_since_time(
     req_context: &crate::server::RequestContext,
 ) -> Option<DateTime<Utc>> {
-    let req = req_context.req();
-    let req_headers = req.headers();
+    let req_headers = req_context.req().headers();
 
     let mut return_value = None;
 
@@ -55,11 +54,11 @@ fn file_modified_since_header(
 ) -> bool {
     let mut return_value = true;
 
-    if let Some(if_modified_since_time) = if_modified_since_time_option {
-        if let Ok(file_last_modified) = file_last_modified_result {
-            let utc_file_last_modified = crate::utils::system_time_to_utc(&file_last_modified);
-            return_value = if_modified_since_time.timestamp() < utc_file_last_modified.timestamp()
-        }
+    if let (Some(if_modified_since_time), Ok(file_last_modified)) =
+        (if_modified_since_time_option, file_last_modified_result)
+    {
+        let utc_file_last_modified = crate::utils::system_time_to_utc(&file_last_modified);
+        return_value = if_modified_since_time.timestamp() < utc_file_last_modified.timestamp();
     }
 
     return_value
@@ -79,25 +78,6 @@ fn build_last_modified_header(
     }
 
     return_value
-}
-
-fn build_not_modified(
-    content_type_header_value_clone: HeaderValue,
-    cache_control_header_value_clone: HeaderValue,
-    last_modified_header_value_option: Option<HeaderValue>,
-) -> Box<Future<Item = ::hyper::Response<::hyper::Body>, Error = ::std::io::Error> + Send> {
-    let mut response_builder = Response::builder();
-    response_builder.status(StatusCode::NOT_MODIFIED);
-    response_builder.header(CONTENT_TYPE, content_type_header_value_clone);
-    response_builder.header(CACHE_CONTROL, cache_control_header_value_clone);
-
-    if let Some(last_modified_header_value) = last_modified_header_value_option {
-        response_builder.header(LAST_MODIFIED, last_modified_header_value);
-    }
-
-    Box::new(future::ok(
-        response_builder.body(::hyper::Body::empty()).unwrap(),
-    ))
 }
 
 fn build_file_response(
@@ -124,6 +104,25 @@ fn build_file_response(
     )
 }
 
+fn build_not_modified(
+    content_type_header_value_clone: HeaderValue,
+    cache_control_header_value_clone: HeaderValue,
+    last_modified_header_value_option: Option<HeaderValue>,
+) -> Box<Future<Item = ::hyper::Response<::hyper::Body>, Error = ::std::io::Error> + Send> {
+    let mut response_builder = Response::builder();
+    response_builder.status(StatusCode::NOT_MODIFIED);
+    response_builder.header(CONTENT_TYPE, content_type_header_value_clone);
+    response_builder.header(CACHE_CONTROL, cache_control_header_value_clone);
+
+    if let Some(last_modified_header_value) = last_modified_header_value_option {
+        response_builder.header(LAST_MODIFIED, last_modified_header_value);
+    }
+
+    Box::new(future::ok(
+        response_builder.body(::hyper::Body::empty()).unwrap(),
+    ))
+}
+
 impl crate::server::RequestHandler for StaticFileHandler {
     fn handle(&self, req_context: &crate::server::RequestContext) -> crate::server::ResponseFuture {
         let file_path_clone = self.file_path.clone();
@@ -136,8 +135,7 @@ impl crate::server::RequestHandler for StaticFileHandler {
             ::tokio_fs::file::File::open(file_path_clone)
                 .and_then(move |file| {
                     file.metadata().and_then(move |metadata_result| {
-                        let file = metadata_result.0;
-                        let metadata = metadata_result.1;
+                        let (file, metadata) = metadata_result;
                         let file_modified = metadata.modified();
 
                         let last_modified_header_value_option =
