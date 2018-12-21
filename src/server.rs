@@ -51,6 +51,10 @@ impl RequestContext {
     pub fn app_context(&self) -> &Arc<ApplicationContext> {
         &self.app_context
     }
+
+    pub fn req(&self) -> &Request<Body> {
+        &self.req
+    }
 }
 
 struct RequestLogInfo {
