@@ -41,7 +41,7 @@ impl HTMLHandler {
                       a(href = "..") {
                           : ".."
                       }
-                      : Raw("&nbsp");
+                      : Raw("&nbsp;");
                       input(type = "checkbox", id = "autoRefresh");
                       label(for = "autoRefresh") {
                           : "Auto Refresh"
