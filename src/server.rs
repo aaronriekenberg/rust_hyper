@@ -271,8 +271,11 @@ pub fn run_forever(
     route_configuration: RouteConfiguration,
 ) -> Result<(), Box<error::Error>> {
     ::hyper::rt::run(future::lazy(move || {
-        let http_client = ::hyper::client::Client::builder()
-            .build(::hyper::client::HttpConnector::new_with_tokio_threadpool_resolver());
+        let mut http_connector =
+            ::hyper::client::HttpConnector::new_with_tokio_threadpool_resolver();
+        http_connector.set_nodelay(server_configuration.tcp_nodelay);
+
+        let http_client = ::hyper::client::Client::builder().build(http_connector);
 
         let application_context = Arc::new(ApplicationContext::new(http_client));
 
