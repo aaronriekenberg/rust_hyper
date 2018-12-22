@@ -57,7 +57,7 @@ fn file_modified_since_header(
     if let (Some(if_modified_since_time), Ok(file_last_modified)) =
         (if_modified_since_time_option, file_last_modified_result)
     {
-        let utc_file_last_modified = crate::utils::system_time_to_utc(&file_last_modified);
+        let utc_file_last_modified = crate::utils::system_time_to_utc(*file_last_modified);
         return_value = if_modified_since_time.timestamp() < utc_file_last_modified.timestamp();
     }
 
@@ -70,7 +70,7 @@ fn build_last_modified_header(
     let mut return_value = None;
 
     if let Ok(modified) = modified_result {
-        let utc_modified = crate::utils::system_time_to_utc(&modified);
+        let utc_modified = crate::utils::system_time_to_utc(*modified);
 
         let last_modified_value = utc_modified.format("%a, %d %b %Y %H:%M:%S GMT").to_string();
 
